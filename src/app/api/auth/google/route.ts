@@ -63,7 +63,7 @@ export async function POST(req: Request) {
 
     // ── Audience check ─────────────────────────────────────────────────────
     // `aud` can be a comma-separated list when multiple client IDs are present
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    const clientId = "210072892963-655umnn3gls5058f0d3q2uj3rv7l2p2j.apps.googleusercontent.com";
     if (clientId) {
       const audiences = String(aud ?? "")
         .split(",")
