@@ -9,7 +9,7 @@ ENV NODE_ENV=production
 RUN npm run build
 
 # Stage 2: Production runner
-FROM docker-central.adda247.com/base-images/eduskill-fe:0.0.1 AS runner
+FROM docker-central.adda247.com/base-images/node-20-alpine:0.0.1 AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
