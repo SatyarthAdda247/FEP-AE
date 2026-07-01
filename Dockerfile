@@ -1,5 +1,5 @@
 # Stage 1: Build
-FROM docker-central.adda247.com/base-images/eduskill-fe:0.0.1 AS builder
+FROM docker-central.adda247.com/base-images/node-20-alpine:0.0.1 AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
