@@ -849,6 +849,7 @@ async function aggregateAll(
     return {
       ...v,
       managerScore: r ? r.total : null,
+      managerRating: r ?? null,
     };
   });
 

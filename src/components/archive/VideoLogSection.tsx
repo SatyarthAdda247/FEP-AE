@@ -19,6 +19,7 @@ interface LiveRow {
   delivery: number | null;
   hook: number | null;
   managerTotal: number | null;
+  managerName?: string | null;
   gradiScore: number | null;
   gradiContrib: number | null;
   combinedTotal: number | null;
@@ -189,7 +190,7 @@ function LiveVideoLog({ data, loading, refetch }: { data: LiveRow[]; loading: bo
                         {v != null ? v.toFixed(1) : "—"}
                       </td>
                     ))}
-                    <ScoreCell value={r.managerTotal} max={25} na={!hasRating} />
+                    <ScoreCell value={r.managerTotal} max={25} na={!hasRating} managerName={r.managerName} />
                     {/* <ScoreCell value={r.gradiContrib} max={25} na={!hasGradi} /> */}
                     {/* <ScoreCell value={r.combinedTotal} max={50} na={!hasRating && !hasGradi} bold /> */}
                     <td style={{ padding: "6px 12px" }}>
@@ -222,7 +223,7 @@ function LiveVideoLog({ data, loading, refetch }: { data: LiveRow[]; loading: bo
   );
 }
 
-function ScoreCell({ value, max, na, bold }: { value: number | null; max: number; na: boolean; bold?: boolean }) {
+function ScoreCell({ value, max, na, bold, managerName }: { value: number | null; max: number; na: boolean; bold?: boolean; managerName?: string | null }) {
   const color = value != null ? scoreColor(value / (max / 5)) : "var(--fg-dim)";
   return (
     <td style={{
@@ -231,7 +232,16 @@ function ScoreCell({ value, max, na, bold }: { value: number | null; max: number
       color: na ? "var(--fg-dim)" : color,
       fontSize: bold ? 13 : 12,
     }}>
-      {na ? "—" : value != null ? `${value}` : "—"}
+      {na ? "—" : (
+        <div className="flex flex-col items-end">
+          <span>{value}</span>
+          {managerName && (
+            <span className="text-[9px] text-fg-muted font-normal font-sans" title={`Rated by ${managerName}`}>
+              by {managerName.split(" ")[0]}
+            </span>
+          )}
+        </div>
+      )}
     </td>
   );
 }

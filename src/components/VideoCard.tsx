@@ -81,6 +81,14 @@ export function VideoCard({ video, onClick, index = 0 }: VideoCardProps) {
               <span className="font-mono">{video.duration}</span>
             </>
           )}
+          {video.managerRating?.managerName && (
+            <>
+              <span className="text-fg-dim">·</span>
+              <span className="text-emerald-400 font-medium truncate max-w-[120px]" title={`Rated by ${video.managerRating.managerName}`}>
+                by {video.managerRating.managerName}
+              </span>
+            </>
+          )}
         </div>
       </div>
     </motion.button>

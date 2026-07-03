@@ -73,6 +73,7 @@ export async function GET() {
       delivery,
       hook,
       managerTotal,
+      managerName: r?.managerName ?? null,
       gradiScore: a?.gradiScore ?? null,
       gradiContrib,
       combinedTotal,

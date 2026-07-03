@@ -627,9 +627,16 @@ function VideoTable({ videos, onSelect }: { videos: (Video & { analysis?: GradiA
 
               <div className="text-center">
                 {(v as any).managerRating?.total !== undefined ? (
-                  <span className="text-mono text-sm font-semibold text-fg">
-                    {(v as any).managerRating.total.toFixed(1)}<span className="text-[9px] text-fg-dim font-normal">/25</span>
-                  </span>
+                  <div className="flex flex-col items-center">
+                    <span className="text-mono text-sm font-semibold text-fg">
+                      {(v as any).managerRating.total.toFixed(1)}<span className="text-[9px] text-fg-dim font-normal">/25</span>
+                    </span>
+                    {(v as any).managerRating.managerName && (
+                      <span className="text-[9px] text-emerald-400 font-medium truncate max-w-[80px]" title={`Rated by ${(v as any).managerRating.managerName}`}>
+                        by {(v as any).managerRating.managerName.split(" ")[0]}
+                      </span>
+                    )}
+                  </div>
                 ) : (
                   <span className="text-[10px] text-fg-dim">pending</span>
                 )}
@@ -980,10 +987,20 @@ function JuneRatingQueue({ openVideoId, setOpenVideoId, managerId, onRated, coho
               <div className="text-center">
                 <button
                   onClick={() => setOpenVideoId(v.videoId)}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 hover:opacity-80 transition-opacity"
+                  className={cn(
+                    "text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors border",
+                    v.status === "manager_rated"
+                      ? "border-border bg-bg-elev/40 hover:bg-bg-elev text-fg"
+                      : "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 hover:opacity-80"
+                  )}
                 >
-                  Score
+                  {(v as any).managerRating?.total !== undefined ? `${(v as any).managerRating.total.toFixed(1)}/25` : "Score"}
                 </button>
+                {(v as any).managerRating?.managerName && (
+                  <p className="text-[9px] text-emerald-400 font-medium mt-1 truncate max-w-[80px] mx-auto" title={`Rated by ${(v as any).managerRating.managerName}`}>
+                    by {(v as any).managerRating.managerName.split(" ")[0]}
+                  </p>
+                )}
               </div>
             </div>
           ))}

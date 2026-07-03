@@ -11,7 +11,50 @@ import { ddb, TABLES } from "@/lib/dynamodb";
 import { getCurrentUser } from "@/lib/auth";
 import { extractYouTubeId, youtubeThumb } from "@/lib/utils";
 import { analyzeWithGradi, processPendingQueue, hasYouTubeTranscript } from "@/lib/gradi";
-import type { Video } from "@/types";
+import type { Video, ManagerRating } from "@/types";
+
+async function attachRatings(videos: Video[]): Promise<(Video & { managerRating: ManagerRating | null })[]> {
+  if (videos.length === 0) return [];
+  const videoIds = videos.map((v) => v.videoId);
+  
+  let ratings: ManagerRating[] = [];
+  if (videoIds.length > 10) {
+    const ratingsRes = await ddb.send(new ScanCommand({ TableName: TABLES.RATINGS }));
+    const allRatings = (ratingsRes.Items ?? []) as ManagerRating[];
+    ratings = allRatings.filter((r) => videoIds.includes(r.videoId));
+  } else {
+    const ratingPromises = videoIds.map((vId) =>
+      ddb.send(
+        new QueryCommand({
+          TableName: TABLES.RATINGS,
+          KeyConditionExpression: "videoId = :v",
+          ExpressionAttributeValues: { ":v": vId },
+        })
+      ).catch((e) => {
+        console.error(`Error querying ratings for ${vId}:`, e);
+        return { Items: [] };
+      })
+    );
+    const ratingResults = await Promise.all(ratingPromises);
+    ratingResults.forEach((r) => {
+      if (r.Items) {
+        ratings.push(...(r.Items as ManagerRating[]));
+      }
+    });
+  }
+
+  const ratingsMap = new Map<string, ManagerRating>();
+  for (const r of ratings) {
+    if (r.managerId === "shared" || !ratingsMap.has(r.videoId)) {
+      ratingsMap.set(r.videoId, r);
+    }
+  }
+
+  return videos.map((v) => ({
+    ...v,
+    managerRating: ratingsMap.get(v.videoId) ?? null,
+  }));
+}
 
 // GET — list videos. Faculty: own only. Manager: all (filterable).
 export async function GET(req: Request) {
@@ -31,8 +74,9 @@ export async function GET(req: Request) {
       })
     );
     const videos = r.Items ?? [];
+    const videosWithRatings = await attachRatings(videos as Video[]);
     processPendingQueue();
-    return NextResponse.json({ videos });
+    return NextResponse.json({ videos: videosWithRatings });
   }
 
   // Manager
@@ -45,8 +89,9 @@ export async function GET(req: Request) {
       })
     );
     const videos = r.Items ?? [];
+    const videosWithRatings = await attachRatings(videos as Video[]);
     processPendingQueue();
-    return NextResponse.json({ videos });
+    return NextResponse.json({ videos: videosWithRatings });
   }
   if (subjectId) {
     const r = await ddb.send(
@@ -59,14 +104,16 @@ export async function GET(req: Request) {
       })
     );
     const videos = r.Items ?? [];
+    const videosWithRatings = await attachRatings(videos as Video[]);
     processPendingQueue();
-    return NextResponse.json({ videos });
+    return NextResponse.json({ videos: videosWithRatings });
   }
 
   const r = await ddb.send(new ScanCommand({ TableName: TABLES.VIDEOS }));
   const videos = r.Items ?? [];
+  const videosWithRatings = await attachRatings(videos as Video[]);
   processPendingQueue();
-  return NextResponse.json({ videos });
+  return NextResponse.json({ videos: videosWithRatings });
 }
 
 // POST — Upload a video link (faculty for themselves, or manager on behalf of a faculty)
