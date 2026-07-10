@@ -32,7 +32,7 @@ const JUNE_WEEKS = [
   { label: "Week 1", range: "08 Jun · 14 Jun", start: new Date("2026-06-08T00:00:00Z"), end: new Date("2026-06-14T23:59:59Z") },
   { label: "Week 2", range: "15 Jun · 21 Jun", start: new Date("2026-06-15T00:00:00Z"), end: new Date("2026-06-21T23:59:59Z") },
   { label: "Week 3", range: "22 Jun · 28 Jun", start: new Date("2026-06-22T00:00:00Z"), end: new Date("2026-06-28T23:59:59Z") },
-  { label: "Week 4", range: "29 Jun · 05 Jul", start: new Date("2026-06-29T00:00:00Z"), end: new Date("2026-07-05T23:59:59Z") },
+  { label: "Week 4", range: "29 Jun · 08 Jul", start: new Date("2026-06-29T00:00:00Z"), end: new Date("2026-07-08T23:59:59Z") },
 ];
 
 
@@ -226,7 +226,7 @@ export default function ScoreboardPage() {
               <option value="wk1">Week 1 (08 Jun - 14 Jun)</option>
               <option value="wk2">Week 2 (15 Jun - 21 Jun)</option>
               <option value="wk3">Week 3 (22 Jun - 28 Jun)</option>
-              <option value="wk4">Week 4 (29 Jun - 05 Jul)</option>
+              <option value="wk4">Week 4 (29 Jun - 08 Jul)</option>
               <option value="custom">Custom Date Range</option>
             </select>
           </div>

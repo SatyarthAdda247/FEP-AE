@@ -23,7 +23,7 @@ const JUNE_WEEKS = [
   { label: "Week 1", range: "Jun 8–14", start: new Date("2026-06-08T00:00:00Z"), end: new Date("2026-06-14T23:59:59Z") },
   { label: "Week 2", range: "Jun 15–21", start: new Date("2026-06-15T00:00:00Z"), end: new Date("2026-06-21T23:59:59Z") },
   { label: "Week 3", range: "Jun 22–28", start: new Date("2026-06-22T00:00:00Z"), end: new Date("2026-06-28T23:59:59Z") },
-  { label: "Week 4", range: "Jun 29–Jul 5", start: new Date("2026-06-29T00:00:00Z"), end: new Date("2026-07-05T23:59:59Z") },
+  { label: "Week 4", range: "Jun 29–Jul 8", start: new Date("2026-06-29T00:00:00Z"), end: new Date("2026-07-08T23:59:59Z") },
 ];
 
 const MARCH_WEEKS = [
