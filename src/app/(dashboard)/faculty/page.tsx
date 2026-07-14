@@ -26,6 +26,7 @@ interface FacultyStats {
   totalViews?: number;
   totalLikes?: number;
   subscribers?: number;
+  cohort?: string;
   ytStatsSyncedAt?: string | null;
   bySubject: Record<string, { count: number; videos: Video[] }>;
   videos: Video[];
@@ -248,6 +249,7 @@ function FacultyDashboardContent() {
           gender={(stats as any)?.gender}
           teachingSubject={(stats as any)?.teachingSubject}
           verticals={stats?.subjects}
+          hideSubscribers={stats?.cohort === "March EduSkill"}
         />
       )}
 

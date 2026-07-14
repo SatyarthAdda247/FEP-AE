@@ -638,14 +638,15 @@ async function aggregateAll(
   loggedInUser?: JWTPayload,
   week: string = "all"
 ) {
-  // 1. Scan USERS to find faculty in the cohort (Scan is necessary as we have no index on cohort)
+  // 1. Scan USERS to find faculty/promoted managers in the cohort
   const usersRes = await ddb.send(
     new ScanCommand({
       TableName: TABLES.USERS,
-      FilterExpression: "#r = :r AND cohort = :c",
+      FilterExpression: "(#r = :f OR #r = :m) AND cohort = :c",
       ExpressionAttributeNames: { "#r": "role" },
       ExpressionAttributeValues: {
-        ":r": "eduskill_faculty",
+        ":f": "eduskill_faculty",
+        ":m": "eduskill_manager",
         ":c": cohort,
       },
     })

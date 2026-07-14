@@ -24,6 +24,7 @@ interface HeroStatsProps {
   gender?: string;
   teachingSubject?: string;
   verticals?: string[];
+  hideSubscribers?: boolean;
 }
 
 export function HeroStats({
@@ -40,6 +41,7 @@ export function HeroStats({
   gender,
   teachingSubject,
   verticals,
+  hideSubscribers = false,
 }: HeroStatsProps) {
   const hasCachedStats = (ytStatsSyncedAt !== null && ytStatsSyncedAt !== undefined && ytStatsSyncedAt !== "") || totalVideos === 0;
 
@@ -105,7 +107,7 @@ export function HeroStats({
         </div>
 
         {/* Stats grid */}
-        <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className={`flex-1 grid grid-cols-2 sm:grid-cols-3 ${hideSubscribers ? "lg:grid-cols-4" : "lg:grid-cols-5"} gap-3`}>
           <Stat
             icon={<Video className="h-3.5 w-3.5" />}
             label="Videos"
@@ -133,14 +135,16 @@ export function HeroStats({
             tone="blue"
             loading={!hasCachedStats}
           />
-          <Stat
-            icon={<Users className="h-3.5 w-3.5" />}
-            label="Subscribers"
-            value={hasCachedStats ? formatCount(subscribers) : "—"}
-            sub="channel subs"
-            tone="violet"
-            loading={!hasCachedStats}
-          />
+          {!hideSubscribers && (
+            <Stat
+              icon={<Users className="h-3.5 w-3.5" />}
+              label="Subscribers"
+              value={hasCachedStats ? formatCount(subscribers) : "—"}
+              sub="channel subs"
+              tone="violet"
+              loading={!hasCachedStats}
+            />
+          )}
         </div>
       </div>
 

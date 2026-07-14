@@ -1466,7 +1466,7 @@ function MarchEduSkillDashboard() {
                 const subscribersGained = selectedFacultyRow ? selectedFacultyRow.subscribersGained : (Math.floor(stats.installs * 0.4) + Math.floor(views * 0.02));
                 
                 return (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="glass rounded-xl p-4">
                       <p className="text-[9px] uppercase tracking-[0.16em] text-fg-muted font-mono">Installs</p>
                       <p className="text-mono text-xl font-bold mt-1.5 text-emerald-400">{stats.installs}</p>
@@ -1478,10 +1478,6 @@ function MarchEduSkillDashboard() {
                     <div className="glass rounded-xl p-4">
                       <p className="text-[9px] uppercase tracking-[0.16em] text-fg-muted font-mono">Views</p>
                       <p className="text-mono text-xl font-bold mt-1.5 text-sky-400">{views}</p>
-                    </div>
-                    <div className="glass rounded-xl p-4">
-                      <p className="text-[9px] uppercase tracking-[0.16em] text-fg-muted font-mono">Subscribers</p>
-                      <p className="text-mono text-xl font-bold mt-1.5 text-violet-400">{subscribersGained}</p>
                     </div>
                   </div>
                 );

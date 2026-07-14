@@ -15,9 +15,13 @@ export async function GET(req: Request) {
   const r = await ddb.send(
     new ScanCommand({
       TableName: TABLES.USERS,
-      FilterExpression: "#r = :r",
+      FilterExpression: "#r = :f OR (#r = :m AND cohort = :march)",
       ExpressionAttributeNames: { "#r": "role" },
-      ExpressionAttributeValues: { ":r": "eduskill_faculty" },
+      ExpressionAttributeValues: { 
+        ":f": "eduskill_faculty",
+        ":m": "eduskill_manager",
+        ":march": "March EduSkill"
+      },
     })
   );
   let items = (r.Items ?? []) as User[];
