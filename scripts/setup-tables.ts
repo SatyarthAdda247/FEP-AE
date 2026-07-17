@@ -34,6 +34,32 @@ const tables = [
     BillingMode: "PAY_PER_REQUEST" as const,
   },
   {
+    TableName: "fep-cohorts",
+    KeySchema: [{ AttributeName: "cohortId", KeyType: "HASH" as const }],
+    AttributeDefinitions: [
+      { AttributeName: "cohortId", AttributeType: "S" as const },
+      { AttributeName: "inviteCode", AttributeType: "S" as const },
+    ],
+    GlobalSecondaryIndexes: [
+      {
+        IndexName: "inviteCode-index",
+        KeySchema: [{ AttributeName: "inviteCode", KeyType: "HASH" as const }],
+        Projection: { ProjectionType: "ALL" as const },
+      },
+    ],
+    BillingMode: "PAY_PER_REQUEST" as const,
+  },
+  {
+    // Candidates marked "selected" per cohort — imported from evaluation sheets
+    // or toggled from the manager roster
+    TableName: "fep-selected-candidates",
+    KeySchema: [{ AttributeName: "candidateId", KeyType: "HASH" as const }],
+    AttributeDefinitions: [
+      { AttributeName: "candidateId", AttributeType: "S" as const },
+    ],
+    BillingMode: "PAY_PER_REQUEST" as const,
+  },
+  {
     TableName: "fep-videos",
     KeySchema: [
       { AttributeName: "facultyId", KeyType: "HASH" as const },

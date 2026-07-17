@@ -2,9 +2,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Trash2, Search, Shield, Users, UserCheck, Loader2, Check, X, Edit2 } from "lucide-react";
-import type { User, Role } from "@/types";
+import { Plus, Trash2, Search, Shield, Users, UserCheck, Loader2, Check, X, Edit2, Link2, Copy, Lock, Unlock, RefreshCw, UsersRound } from "lucide-react";
+import type { User, Role, Cohort } from "@/types";
 import { cn } from "@/lib/utils";
+
+type CohortRow = Cohort & { memberCount: number; pendingCount: number };
+type CohortsResponse = { cohorts: CohortRow[]; legacy: { name: string; memberCount: number }[] };
 
 const ROLE_LABELS: Record<Role, { label: string; color: string }> = {
   eduskill_admin:   { label: "Admin",   color: "text-violet-500 bg-violet-500/10 border-violet-500/25" },
@@ -23,6 +26,15 @@ export default function AdminDashboard() {
     queryKey: ["admin-users"],
     queryFn: () => fetch("/api/admin/users").then(r => r.json()),
   });
+
+  const cohortsQ = useQuery<CohortsResponse>({
+    queryKey: ["admin-cohorts"],
+    queryFn: () => fetch("/api/admin/cohorts").then(r => r.json()),
+  });
+  const cohortNames = [
+    ...(cohortsQ.data?.cohorts ?? []).map(c => c.name),
+    ...(cohortsQ.data?.legacy ?? []).map(c => c.name),
+  ];
 
   const createMut = useMutation({
     mutationFn: (data: Record<string, unknown>) =>
@@ -108,6 +120,12 @@ export default function AdminDashboard() {
         <StatCard icon={Shield} label="Admins" value={stats.admins} />
       </div>
 
+      {/* Pending approvals */}
+      <ApprovalsPanel />
+
+      {/* Cohorts */}
+      <CohortsPanel data={cohortsQ.data} isLoading={cohortsQ.isLoading} />
+
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap mb-4">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
@@ -152,7 +170,10 @@ export default function AdminDashboard() {
             <input value={draft.teachingSubject} onChange={e => setDraft(d => ({ ...d, teachingSubject: e.target.value }))}
               placeholder="Teaching Subject" className="rounded-lg border border-border bg-bg-elev px-3 py-2 text-sm text-fg outline-none" />
             <input value={draft.cohort} onChange={e => setDraft(d => ({ ...d, cohort: e.target.value }))}
-              placeholder="Cohort (e.g. June EduSkill)" className="rounded-lg border border-border bg-bg-elev px-3 py-2 text-sm text-fg outline-none" />
+              list="cohort-names" placeholder="Cohort (e.g. June EduSkill)" className="rounded-lg border border-border bg-bg-elev px-3 py-2 text-sm text-fg outline-none" />
+            <datalist id="cohort-names">
+              {cohortNames.map(n => <option key={n} value={n} />)}
+            </datalist>
           </div>
           <div className="flex gap-2 mt-4">
             <button
@@ -222,7 +243,22 @@ export default function AdminDashboard() {
                             className="rounded border border-border bg-bg px-2 py-1 text-xs w-full max-w-[200px] outline-none focus:border-fg/30"
                           />
                         ) : (
-                          u.email
+                          <>
+                            {u.email}
+                            {(u.videoSampleLink || u.resumeLink || u.dob) && (
+                              <div className="flex items-center gap-2 mt-0.5 text-[10px]">
+                                {u.dob && <span className="text-fg-dim">DOB: {u.dob}</span>}
+                                {u.videoSampleLink && (
+                                  <a href={u.videoSampleLink} target="_blank" rel="noopener noreferrer"
+                                    className="text-sky-500 hover:underline">Video Sample</a>
+                                )}
+                                {u.resumeLink && (
+                                  <a href={u.resumeLink} target="_blank" rel="noopener noreferrer"
+                                    className="text-sky-500 hover:underline">Resume</a>
+                                )}
+                              </div>
+                            )}
+                          </>
                         )}
                       </td>
                       <td className="px-3 py-2.5">
@@ -336,6 +372,214 @@ export default function AdminDashboard() {
           Showing {filtered.length} of {users.length} users
         </div>
       </div>
+    </div>
+  );
+}
+
+function ApprovalsPanel() {
+  const qc = useQueryClient();
+  const pendingQ = useQuery<{ pending: User[] }>({
+    queryKey: ["admin-approvals"],
+    queryFn: () => fetch("/api/admin/approvals").then(r => r.json()),
+  });
+
+  const actMut = useMutation({
+    mutationFn: (body: { userId: string; action: "approve" | "reject" }) =>
+      fetch("/api/admin/approvals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(r => r.json()),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-approvals"] });
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      qc.invalidateQueries({ queryKey: ["admin-cohorts"] });
+    },
+  });
+
+  const pending = pendingQ.data?.pending ?? [];
+  if (pendingQ.isLoading || pending.length === 0) return null;
+
+  return (
+    <div className="glass-strong rounded-2xl p-5 mb-6 border border-amber-500/20">
+      <div className="flex items-center gap-2 mb-1">
+        <UserCheck className="h-4 w-4 text-amber-500" />
+        <h2 className="text-sm font-semibold">Pending Approvals</h2>
+        <span className="rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-500 px-2 py-0.5 text-[10px] font-medium">
+          {pending.length}
+        </span>
+      </div>
+      <p className="text-xs text-fg-muted mb-4">
+        These people applied via a cohort invite link. They can&apos;t log in until approved.
+      </p>
+
+      <div className="space-y-2">
+        {pending.map(u => (
+          <div key={u.userId} className="flex items-center gap-3 flex-wrap rounded-xl border border-border/60 bg-bg-elev/40 px-4 py-3">
+            <div className="min-w-[180px]">
+              <div className="text-sm font-medium">{u.name}</div>
+              <div className="text-[11px] text-fg-muted">{u.email}{u.phone ? ` · ${u.phone}` : ""}</div>
+            </div>
+            <div className="text-[11px] text-fg-muted">
+              <div>{u.cohort ?? "—"}{u.teachingSubject ? ` · ${u.teachingSubject}` : ""}</div>
+              <div className="flex items-center gap-2 mt-0.5">
+                {u.dob && <span className="text-fg-dim">DOB: {u.dob}</span>}
+                {u.videoSampleLink && (
+                  <a href={u.videoSampleLink} target="_blank" rel="noopener noreferrer" className="text-sky-500 hover:underline">Video Sample</a>
+                )}
+                {u.resumeLink && (
+                  <a href={u.resumeLink} target="_blank" rel="noopener noreferrer" className="text-sky-500 hover:underline">Resume</a>
+                )}
+              </div>
+            </div>
+            <div className="ml-auto inline-flex items-center gap-2">
+              <button onClick={() => actMut.mutate({ userId: u.userId, action: "approve" })} disabled={actMut.isPending}
+                className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 px-3 py-1.5 text-xs font-medium hover:bg-emerald-500/20 disabled:opacity-40">
+                <Check className="h-3.5 w-3.5" />Approve
+              </button>
+              <button onClick={() => { if (confirm(`Reject ${u.name}'s application?`)) actMut.mutate({ userId: u.userId, action: "reject" }); }} disabled={actMut.isPending}
+                className="flex items-center gap-1.5 rounded-full bg-rose-500/10 border border-rose-500/25 text-rose-500 px-3 py-1.5 text-xs font-medium hover:bg-rose-500/20 disabled:opacity-40">
+                <X className="h-3.5 w-3.5" />Reject
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+      {actMut.data?.error && <p className="mt-3 text-xs text-rose-500">{actMut.data.error}</p>}
+    </div>
+  );
+}
+
+function CohortsPanel({ data, isLoading }: { data?: CohortsResponse; isLoading: boolean }) {
+  const qc = useQueryClient();
+  const [newName, setNewName] = useState("");
+  const [newCapacity, setNewCapacity] = useState("");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["admin-cohorts"] });
+
+  const createMut = useMutation({
+    mutationFn: (body: { name: string; capacity?: string }) =>
+      fetch("/api/admin/cohorts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(r => r.json()),
+    onSuccess: (res) => { if (!res.error) { setNewName(""); setNewCapacity(""); } invalidate(); },
+  });
+
+  const updateMut = useMutation({
+    mutationFn: (body: { cohortId: string; signupOpen?: boolean; regenerateCode?: boolean; capacity?: number | null }) =>
+      fetch("/api/admin/cohorts", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(r => r.json()),
+    onSuccess: invalidate,
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (cohortId: string) =>
+      fetch("/api/admin/cohorts", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cohortId }) }).then(r => r.json()),
+    onSuccess: invalidate,
+  });
+
+  function copyLink(c: CohortRow) {
+    navigator.clipboard.writeText(`${window.location.origin}/join/${c.inviteCode}`);
+    setCopiedId(c.cohortId);
+    setTimeout(() => setCopiedId(null), 1500);
+  }
+
+  const cohorts = data?.cohorts ?? [];
+  const legacy = data?.legacy ?? [];
+
+  return (
+    <div className="glass rounded-2xl p-5 mb-6">
+      <div className="flex items-center gap-2 mb-1">
+        <UsersRound className="h-4 w-4 text-fg-muted" />
+        <h2 className="text-sm font-semibold">Cohorts</h2>
+      </div>
+      <p className="text-xs text-fg-muted mb-4">
+        Create a cohort, then share its invite link — new faculty sign themselves up and land directly in it.
+      </p>
+
+      {/* One-click create */}
+      <div className="flex items-center gap-2 flex-wrap mb-4">
+        <input value={newName} onChange={e => setNewName(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter" && newName.trim()) createMut.mutate({ name: newName, capacity: newCapacity }); }}
+          placeholder="New cohort name (e.g. August EduSkill)"
+          className="flex-1 max-w-sm rounded-lg border border-border bg-bg-elev px-3 py-2 text-sm text-fg outline-none focus:border-fg/30" />
+        <input value={newCapacity} onChange={e => setNewCapacity(e.target.value.replace(/\D/g, ""))}
+          placeholder="Seats (optional)" inputMode="numeric"
+          className="w-32 rounded-lg border border-border bg-bg-elev px-3 py-2 text-sm text-fg outline-none focus:border-fg/30" />
+        <button onClick={() => createMut.mutate({ name: newName, capacity: newCapacity })} disabled={!newName.trim() || createMut.isPending}
+          className="flex items-center gap-1.5 rounded-full bg-fg px-4 py-2 text-xs font-medium text-bg disabled:opacity-40">
+          {createMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+          Create Cohort
+        </button>
+      </div>
+      {createMut.data?.error && <p className="mb-3 text-xs text-rose-500">{createMut.data.error}</p>}
+
+      {isLoading ? (
+        <div className="flex h-16 items-center justify-center">
+          <Loader2 className="h-4 w-4 animate-spin text-fg-muted" />
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {cohorts.length === 0 && legacy.length === 0 && (
+            <p className="text-xs text-fg-dim">No cohorts yet — create your first one above.</p>
+          )}
+          {cohorts.map(c => (
+            <div key={c.cohortId} className="flex items-center gap-3 flex-wrap rounded-xl border border-border/60 bg-bg-elev/40 px-4 py-2.5">
+              <div className="min-w-[140px]">
+                <div className="text-sm font-medium">{c.name}</div>
+                <div className="text-[10px] text-fg-dim">
+                  {c.capacity ? `${c.memberCount} / ${c.capacity} seats` : `${c.memberCount} member${c.memberCount === 1 ? "" : "s"}`}
+                  {c.pendingCount > 0 && <span className="text-amber-500"> · {c.pendingCount} pending</span>}
+                </div>
+              </div>
+              <span className={cn(
+                "rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wider font-medium",
+                c.signupOpen
+                  ? "text-emerald-500 bg-emerald-500/10 border-emerald-500/25"
+                  : "text-fg-dim bg-bg-elev border-border"
+              )}>
+                {c.signupOpen ? "Signup Open" : "Signup Closed"}
+              </span>
+              <code className="flex items-center gap-1 text-[11px] text-fg-muted bg-bg px-2 py-1 rounded-md border border-border/60">
+                <Link2 className="h-3 w-3" />/join/{c.inviteCode}
+              </code>
+              <div className="ml-auto inline-flex items-center gap-1">
+                <button onClick={() => copyLink(c)} title="Copy invite link"
+                  className="text-fg-dim hover:text-sky-500 p-1.5 hover:bg-sky-500/10 rounded-lg cursor-pointer inline-flex items-center border-none bg-transparent">
+                  {copiedId === c.cohortId ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                </button>
+                <button onClick={() => updateMut.mutate({ cohortId: c.cohortId, signupOpen: !c.signupOpen })}
+                  title={c.signupOpen ? "Close signups" : "Reopen signups"}
+                  className="text-fg-dim hover:text-amber-500 p-1.5 hover:bg-amber-500/10 rounded-lg cursor-pointer inline-flex items-center border-none bg-transparent">
+                  {c.signupOpen ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
+                </button>
+                <button onClick={() => {
+                  const v = prompt(`Seat limit for "${c.name}" (blank or 0 = unlimited):`, c.capacity ? String(c.capacity) : "");
+                  if (v === null) return;
+                  const n = Number(v.trim() || 0);
+                  if (!Number.isInteger(n) || n < 0) { alert("Enter a whole number."); return; }
+                  updateMut.mutate({ cohortId: c.cohortId, capacity: n === 0 ? null : n });
+                }} title="Set seat limit"
+                  className="text-fg-dim hover:text-emerald-500 p-1.5 hover:bg-emerald-500/10 rounded-lg cursor-pointer inline-flex items-center border-none bg-transparent">
+                  <Users className="h-3.5 w-3.5" />
+                </button>
+                <button onClick={() => { if (confirm("Generate a new invite link? The old link will stop working.")) updateMut.mutate({ cohortId: c.cohortId, regenerateCode: true }); }}
+                  title="Regenerate invite link"
+                  className="text-fg-dim hover:text-violet-500 p-1.5 hover:bg-violet-500/10 rounded-lg cursor-pointer inline-flex items-center border-none bg-transparent">
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </button>
+                <button onClick={() => { if (confirm(`Delete cohort "${c.name}"? Existing members keep their cohort label, but the invite link stops working.`)) deleteMut.mutate(c.cohortId); }}
+                  title="Delete cohort"
+                  className="text-fg-dim hover:text-rose-500 p-1.5 hover:bg-rose-500/10 rounded-lg cursor-pointer inline-flex items-center border-none bg-transparent">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+          {legacy.map(l => (
+            <div key={l.name} className="flex items-center gap-3 rounded-xl border border-dashed border-border/60 px-4 py-2.5 opacity-70">
+              <div className="min-w-[140px]">
+                <div className="text-sm font-medium">{l.name}</div>
+                <div className="text-[10px] text-fg-dim">{l.memberCount} member{l.memberCount === 1 ? "" : "s"} · legacy (no invite link)</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

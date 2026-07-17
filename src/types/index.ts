@@ -1,5 +1,7 @@
 export type Role = "eduskill_faculty" | "eduskill_manager" | "eduskill_admin";
 
+export type ApprovalStatus = "pending" | "approved" | "rejected";
+
 export type VideoStatus =
   | "uploaded"
   | "analyzing"
@@ -19,11 +21,44 @@ export interface User {
   cohort?: string;              // e.g. "June EduSkill", "March EduSkill"
   adjustToken?: string;         // Adjust tracking token
   trackingLink?: string;        // Full adjust tracking link
+  videoSampleLink?: string;     // sample teaching video (YouTube/Drive), from signup
+  resumeLink?: string;          // resume URL (Drive/Dropbox), from signup
+  approvalStatus?: ApprovalStatus; // absent = approved (legacy/admin-created accounts)
   passwordHash?: string;
   avatarUrl?: string;
   age?: number;
   dob?: string;
   gender?: string;
+  createdAt: string;
+}
+
+export interface Cohort {
+  cohortId: string;
+  name: string;            // e.g. "August EduSkill" — stored on User.cohort
+  inviteCode: string;      // short code embedded in the public /join/<code> link
+  signupOpen: boolean;     // admin can pause self-registration without deleting
+  capacity?: number;       // max enrolled (approved) members; unlimited if absent
+  createdBy: string;       // admin userId
+  createdAt: string;
+}
+
+/** A candidate marked "selected" for a cohort — imported from an evaluation
+ *  sheet or toggled from the manager roster (then sourceUserId is set). */
+export interface SelectedCandidate {
+  candidateId: string;
+  cohort: string;
+  name: string;
+  regNo?: string;
+  contact?: string;
+  subject?: string;
+  vertical?: string;
+  replacement?: string;        // Yes / No / May be (from evaluation sheet)
+  newInitiatives?: string;
+  offlineEducators?: string;
+  resumeLink?: string;
+  videoLink?: string;
+  sourceUserId?: string;       // set when selected from the roster
+  selectedBy?: string;
   createdAt: string;
 }
 

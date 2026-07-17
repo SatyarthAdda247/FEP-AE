@@ -18,6 +18,8 @@ export const ddb = DynamoDBDocumentClient.from(client, {
 
 export const TABLES = {
   USERS: "fep-users",
+  COHORTS: "fep-cohorts",
+  SELECTED: "fep-selected-candidates",
   VIDEOS: "fep-videos",
   ANALYSES: "fep-gradi-analyses",
   RATINGS: "fep-manager-ratings",

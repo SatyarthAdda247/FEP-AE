@@ -35,6 +35,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
+    if (user.approvalStatus === "pending") {
+      return NextResponse.json(
+        { error: "Your application is awaiting admin approval. You'll be able to log in once approved." },
+        { status: 403 }
+      );
+    }
+    if (user.approvalStatus === "rejected") {
+      return NextResponse.json(
+        { error: "Your application was not approved. Contact your program admin for details." },
+        { status: 403 }
+      );
+    }
+
     const token = await signToken({
       userId: user.userId,
       email: user.email,

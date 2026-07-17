@@ -1,11 +1,12 @@
 "use client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import MobileNavBar from "@/components/MobileNavBar";
 import { useState, useMemo, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Users, Sparkles, LayoutGrid, BarChart3, Loader2, Play, Link as LinkIcon, Eye, ThumbsUp, ClipboardList } from "lucide-react";
+import { Search, Users, Sparkles, LayoutGrid, BarChart3, Loader2, Play, Link as LinkIcon, Eye, ThumbsUp, ClipboardList, UserCheck } from "lucide-react";
+import { SelectedCandidatesPanel } from "@/components/SelectedCandidates";
 import { Leaderboard } from "@/components/Leaderboard";
 import { VideoDrawer } from "@/components/VideoDrawer";
 import { SubjectTabs } from "@/components/SubjectTabs";
@@ -58,7 +59,7 @@ function ManagerDashboardContent() {
   }, [urlFacultyId]);
   const [openVideoId, setOpenVideoId] = useState<string | null>(null);
   const [activeSubjectTab, setActiveSubjectTab] = useState("all");
-  const [view, setView] = useState<"roster" | "analytics" | "rating">("roster");
+  const [view, setView] = useState<"roster" | "analytics" | "rating" | "selected">("roster");
   const [activeCohort, setActiveCohort] = useState<string>("June EduSkill");
 
   const [expandedVideoId, setExpandedVideoId] = useState<string | null>(null);
@@ -103,10 +104,23 @@ function ManagerDashboardContent() {
     return () => window.removeEventListener("cohort-change", handleCohortChange);
   }, []);
 
+  const qc = useQueryClient();
+
   const meQ = useQuery({
     queryKey: ["me"],
     queryFn: async (): Promise<{ user: JWTPayload | null }> =>
       (await fetch("/api/auth/me")).json(),
+  });
+
+  const selectedCandidatesQ = useQuery<{ selectedUserIds: string[] }>({
+    queryKey: ["selected-candidates", activeCohort],
+    queryFn: () => fetch(`/api/selected-candidates?cohort=${encodeURIComponent(activeCohort)}`).then(r => r.json()),
+  });
+
+  const toggleSelectMut = useMutation({
+    mutationFn: (userId: string) =>
+      fetch("/api/selected-candidates", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId }) }).then(r => r.json()),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["selected-candidates"] }),
   });
 
   const subjectsQ = useQuery({
@@ -209,6 +223,7 @@ function ManagerDashboardContent() {
                 { id: "roster" as const, label: "Roster", icon: LayoutGrid },
                 { id: "rating" as const, label: "Rating Queue", icon: ClipboardList },
                 { id: "analytics" as const, label: "Analytics", icon: BarChart3 },
+                { id: "selected" as const, label: "Selected", icon: UserCheck },
               ]
             ).map((v) => {
               const Icon = v.icon;
@@ -274,6 +289,17 @@ function ManagerDashboardContent() {
             transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
           >
             <JuneRatingQueue openVideoId={openVideoId} setOpenVideoId={setOpenVideoId} managerId={meQ.data?.user?.userId} onRated={() => aggQ.refetch()} cohort={activeCohort} />
+          </motion.div>
+        ) : view === "selected" ? (
+          <motion.div
+            key="selected"
+            className="flex-1 min-h-0 overflow-hidden flex flex-col"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <SelectedCandidatesPanel cohort={activeCohort} />
           </motion.div>
         ) : (
           <motion.div
@@ -423,12 +449,35 @@ function ManagerDashboardContent() {
                     </span>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-mono text-2xl font-semibold">
-                    {facultyQ.data?.totalVideos ?? 0}
-                  </div>
-                  <div className="text-[10px] uppercase tracking-wider text-fg-muted">
-                    videos
+                <div className="flex items-center gap-4">
+                  {(() => {
+                    const isSelected = (selectedCandidatesQ.data?.selectedUserIds ?? []).includes(selectedFaculty);
+                    return (
+                      <button
+                        onClick={() => toggleSelectMut.mutate(selectedFaculty)}
+                        disabled={toggleSelectMut.isPending}
+                        title={isSelected ? "Remove from selected candidates" : "Mark as selected candidate"}
+                        className={cn(
+                          "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-40",
+                          isSelected
+                            ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-500 hover:bg-emerald-500/25"
+                            : "border-border text-fg-muted hover:text-emerald-500 hover:border-emerald-500/40 hover:bg-emerald-500/10"
+                        )}
+                      >
+                        {toggleSelectMut.isPending
+                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          : <UserCheck className="h-3.5 w-3.5" />}
+                        {isSelected ? "Selected ✓" : "Select Candidate"}
+                      </button>
+                    );
+                  })()}
+                  <div className="text-right">
+                    <div className="text-mono text-2xl font-semibold">
+                      {facultyQ.data?.totalVideos ?? 0}
+                    </div>
+                    <div className="text-[10px] uppercase tracking-wider text-fg-muted">
+                      videos
+                    </div>
                   </div>
                 </div>
               </div>
