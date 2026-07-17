@@ -1,4 +1,6 @@
-export type Role = "eduskill_faculty" | "eduskill_manager" | "eduskill_admin";
+/** eduskill_viewer: read-only access for any verified @adda247.com Google
+ *  account — no DB record; the role exists only in the session JWT. */
+export type Role = "eduskill_faculty" | "eduskill_manager" | "eduskill_admin" | "eduskill_viewer";
 
 export type ApprovalStatus = "pending" | "approved" | "rejected";
 

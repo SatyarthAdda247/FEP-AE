@@ -111,6 +111,7 @@ function ManagerDashboardContent() {
     queryFn: async (): Promise<{ user: JWTPayload | null }> =>
       (await fetch("/api/auth/me")).json(),
   });
+  const isViewer = meQ.data?.user?.role === "eduskill_viewer";
 
   const selectedCandidatesQ = useQuery<{ selectedUserIds: string[] }>({
     queryKey: ["selected-candidates", activeCohort],
@@ -288,7 +289,7 @@ function ManagerDashboardContent() {
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
           >
-            <JuneRatingQueue openVideoId={openVideoId} setOpenVideoId={setOpenVideoId} managerId={meQ.data?.user?.userId} onRated={() => aggQ.refetch()} cohort={activeCohort} />
+            <JuneRatingQueue openVideoId={openVideoId} setOpenVideoId={setOpenVideoId} managerId={meQ.data?.user?.userId} onRated={() => aggQ.refetch()} cohort={activeCohort} readOnly={isViewer} />
           </motion.div>
         ) : view === "selected" ? (
           <motion.div
@@ -299,7 +300,7 @@ function ManagerDashboardContent() {
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
           >
-            <SelectedCandidatesPanel cohort={activeCohort} />
+            <SelectedCandidatesPanel cohort={activeCohort} readOnly={isViewer} />
           </motion.div>
         ) : (
           <motion.div
@@ -451,6 +452,7 @@ function ManagerDashboardContent() {
                 </div>
                 <div className="flex items-center gap-4">
                   {(() => {
+                    if (isViewer) return null;
                     const isSelected = (selectedCandidatesQ.data?.selectedUserIds ?? []).includes(selectedFaculty);
                     return (
                       <button
@@ -525,7 +527,7 @@ function ManagerDashboardContent() {
       <VideoDrawer
         videoId={openVideoId}
         onClose={() => setOpenVideoId(null)}
-        managerMode
+        managerMode={!isViewer}
         managerId={meQ.data?.user?.userId}
         onRated={() => {
           aggQ.refetch();
@@ -799,7 +801,7 @@ function VideoTable({ videos, onSelect }: { videos: (Video & { analysis?: GradiA
   );
 }
 
-function JuneRatingQueue({ openVideoId, setOpenVideoId, managerId, onRated, cohort }: { openVideoId: string | null; setOpenVideoId: (id: string | null) => void; managerId?: string; onRated: () => void; cohort?: string }) {
+function JuneRatingQueue({ openVideoId, setOpenVideoId, managerId, onRated, cohort, readOnly }: { openVideoId: string | null; setOpenVideoId: (id: string | null) => void; managerId?: string; onRated: () => void; cohort?: string; readOnly?: boolean }) {
   const [ratingFilter, setRatingFilter] = useState<"unrated" | "rated" | "all">("unrated");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const [facultyFilter, setFacultyFilter] = useState<string>("all");
@@ -1057,7 +1059,7 @@ function JuneRatingQueue({ openVideoId, setOpenVideoId, managerId, onRated, coho
         </div>
       )}
 
-      <VideoDrawer videoId={openVideoId} onClose={() => setOpenVideoId(null)} managerMode managerId={managerId} onRated={() => { onRated(); videosQ.refetch(); }} />
+      <VideoDrawer videoId={openVideoId} onClose={() => setOpenVideoId(null)} managerMode={!readOnly} managerId={managerId} onRated={() => { onRated(); videosQ.refetch(); }} />
     </div>
   );
 }

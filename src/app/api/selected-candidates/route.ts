@@ -10,10 +10,13 @@ async function requireManager() {
   return user;
 }
 
-// GET ?cohort= — selected candidates for a cohort (all cohorts if omitted)
+// GET ?cohort= — selected candidates for a cohort (all cohorts if omitted).
+// Viewers may read; only managers/admins may mutate.
 export async function GET(req: Request) {
-  const manager = await requireManager();
-  if (!manager) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+  const user = await getCurrentUser();
+  if (!user || user.role === "eduskill_faculty") {
+    return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+  }
 
   const { searchParams } = new URL(req.url);
   const cohort = searchParams.get("cohort");

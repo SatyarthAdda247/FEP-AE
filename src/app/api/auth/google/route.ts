@@ -144,6 +144,28 @@ export async function POST(req: Request) {
     }
 
     if (!user) {
+      // Any verified @adda247.com account gets read-only viewer access —
+      // no DB record is created; the role lives only in the session JWT.
+      const verified = email_verified === true || email_verified === "true";
+      if (verified && normalizedEmail.endsWith("@adda247.com")) {
+        const viewerToken = await signToken({
+          userId: `viewer:${normalizedEmail}`,
+          email: normalizedEmail,
+          name: name || normalizedEmail,
+          role: "eduskill_viewer",
+        });
+        await setAuthCookie(viewerToken);
+        return NextResponse.json({
+          user: {
+            userId: `viewer:${normalizedEmail}`,
+            email: normalizedEmail,
+            name: name || normalizedEmail,
+            role: "eduskill_viewer",
+            subjects: [],
+            avatarUrl: picture,
+          },
+        });
+      }
       return NextResponse.json(
         {
           error: `Access denied. The email "${email}" is not registered in the EduSkill system. Contact your program manager to get access.`,

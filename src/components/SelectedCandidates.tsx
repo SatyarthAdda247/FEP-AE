@@ -39,7 +39,7 @@ function FlagSelect({ value, onChange }: { value: string; onChange: (v: string) 
   );
 }
 
-export function SelectedCandidatesPanel({ cohort }: { cohort: string }) {
+export function SelectedCandidatesPanel({ cohort, readOnly }: { cohort: string; readOnly?: boolean }) {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -239,7 +239,7 @@ export function SelectedCandidatesPanel({ cohort }: { cohort: string }) {
                               <X className="h-3.5 w-3.5" />
                             </button>
                           </div>
-                        ) : (
+                        ) : readOnly ? null : (
                           <div className="inline-flex items-center gap-1">
                             <button onClick={() => startEdit(c)}
                               className="text-fg-dim hover:text-emerald-500 p-1.5 hover:bg-emerald-500/10 rounded-lg cursor-pointer inline-flex items-center border-none bg-transparent"

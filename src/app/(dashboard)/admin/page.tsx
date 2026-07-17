@@ -13,6 +13,8 @@ const ROLE_LABELS: Record<Role, { label: string; color: string }> = {
   eduskill_admin:   { label: "Admin",   color: "text-violet-500 bg-violet-500/10 border-violet-500/25" },
   eduskill_manager: { label: "Manager", color: "text-emerald-500 bg-emerald-500/10 border-emerald-500/25" },
   eduskill_faculty: { label: "Faculty", color: "text-sky-500 bg-sky-500/10 border-sky-500/25" },
+  // JWT-only role for @adda247.com Google sign-ins; never stored on user records
+  eduskill_viewer:  { label: "Viewer",  color: "text-fg-muted bg-bg-elev border-border" },
 };
 
 export default function AdminDashboard() {

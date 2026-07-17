@@ -35,18 +35,18 @@ export default async function proxy(req: NextRequest) {
     if (role === "fep_manager") role = "eduskill_manager";
     if (role === "fep_admin") role = "eduskill_admin";
 
-    // Role-scoped protections
+    // Role-scoped protections (viewers browse manager views read-only)
     if (pathname.startsWith("/admin") && role !== "eduskill_admin") {
       const url = req.nextUrl.clone();
-      url.pathname = role === "eduskill_manager" ? "/manager" : "/faculty";
+      url.pathname = role === "eduskill_manager" || role === "eduskill_viewer" ? "/manager" : "/faculty";
       return NextResponse.redirect(url);
     }
-    if (pathname.startsWith("/manager") && role !== "eduskill_manager" && role !== "eduskill_admin") {
+    if (pathname.startsWith("/manager") && role !== "eduskill_manager" && role !== "eduskill_admin" && role !== "eduskill_viewer") {
       const url = req.nextUrl.clone();
       url.pathname = "/faculty";
       return NextResponse.redirect(url);
     }
-    if (pathname.startsWith("/faculty") && role === "eduskill_manager") {
+    if (pathname.startsWith("/faculty") && (role === "eduskill_manager" || role === "eduskill_viewer")) {
       const url = req.nextUrl.clone();
       url.pathname = "/manager";
       return NextResponse.redirect(url);

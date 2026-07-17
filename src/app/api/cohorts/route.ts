@@ -6,7 +6,7 @@ import type { User } from "@/types";
 
 export async function GET(req: Request) {
   const user = await getCurrentUser();
-  if (!user || (user.role !== "eduskill_manager" && user.role !== "eduskill_admin")) {
+  if (!user || (user.role !== "eduskill_manager" && user.role !== "eduskill_admin" && user.role !== "eduskill_viewer")) {
     return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
   }
 

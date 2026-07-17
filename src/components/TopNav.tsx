@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 
 interface TopNavProps {
   userName: string;
-  role: "eduskill_faculty" | "eduskill_manager" | "eduskill_admin";
+  role: "eduskill_faculty" | "eduskill_manager" | "eduskill_admin" | "eduskill_viewer";
 }
 
 export function TopNav({ userName, role }: TopNavProps) {
@@ -31,7 +31,7 @@ export function TopNav({ userName, role }: TopNavProps) {
   const [cohort, setCohort] = useState<string>("");
   const [showCohortMenu, setShowCohortMenu] = useState(false);
 
-  const isManager = role === "eduskill_manager" || role === "eduskill_admin";
+  const isManager = role === "eduskill_manager" || role === "eduskill_admin" || role === "eduskill_viewer";
 
   useEffect(() => {
     if (isManager) {
@@ -57,7 +57,7 @@ export function TopNav({ userName, role }: TopNavProps) {
     router.replace("/login");
   }
 
-  const dashHref = role === "eduskill_manager" || role === "eduskill_admin" ? "/manager" : "/faculty";
+  const dashHref = isManager ? "/manager" : "/faculty";
 
   const navItems = [
     { href: dashHref, label: "Dashboard", icon: LayoutDashboard },
