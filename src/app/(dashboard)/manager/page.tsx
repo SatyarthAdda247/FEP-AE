@@ -200,9 +200,17 @@ function ManagerDashboardContent() {
     [aggQ.data, selectedFaculty]
   );
 
+  if (meQ.isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-bg">
+        <Loader2 className="h-6 w-6 animate-spin text-fg-muted" />
+      </div>
+    );
+  }
+
   // If March EduSkill is selected, show the March cohort dashboard
   if (activeCohort === "March EduSkill") {
-    return <MarchEduSkillDashboard />;
+    return <MarchEduSkillDashboard isViewer={isViewer} />;
   }
 
   return (
@@ -1045,7 +1053,7 @@ function JuneRatingQueue({ openVideoId, setOpenVideoId, managerId, onRated, coho
                       : "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 hover:opacity-80"
                   )}
                 >
-                  {(v as any).managerRating?.total !== undefined ? `${(v as any).managerRating.total.toFixed(1)}/25` : "Score"}
+                  {(v as any).managerRating?.total !== undefined ? `${(v as any).managerRating.total.toFixed(1)}/25` : (readOnly ? "View" : "Score")}
                 </button>
                 {(v as any).managerRating?.managerName && (
                   <p className="text-[9px] text-emerald-400 font-medium mt-1 truncate max-w-[80px] mx-auto" title={`Rated by ${(v as any).managerRating.managerName}`}>
@@ -1066,7 +1074,7 @@ function JuneRatingQueue({ openVideoId, setOpenVideoId, managerId, onRated, coho
 
 // CohortView component removed.
 
-function MarchEduSkillDashboard() {
+function MarchEduSkillDashboard({ isViewer = false }: { isViewer?: boolean }) {
   const TARGET_INSTALLS = 100;
   const searchParams = useSearchParams();
   const urlFacultyId = searchParams ? searchParams.get("facultyId") : null;
@@ -1546,14 +1554,24 @@ function MarchEduSkillDashboard() {
                   <p className="text-xs text-fg-muted text-center py-6">No videos uploaded yet.</p>
                 ) : (
                   <div className="border border-border rounded-xl overflow-hidden">
-                    <div className="grid grid-cols-[80px_1fr_120px_50px] gap-2 px-4 py-2 bg-bg-elev/50 border-b border-border text-[9px] uppercase tracking-wider font-semibold text-fg-muted">
+                    <div className={cn(
+                      "grid gap-2 px-4 py-2 bg-bg-elev/50 border-b border-border text-[9px] uppercase tracking-wider font-semibold text-fg-muted",
+                      isViewer ? "grid-cols-[80px_1fr_120px]" : "grid-cols-[80px_1fr_120px_50px]"
+                    )}>
                       <span></span>
                       <span>Title</span>
                       <span>Date</span>
-                      <span className="text-right">Delete</span>
+                      {!isViewer && <span className="text-right">Delete</span>}
                     </div>
                     {videos.map(v => (
-                      <div key={v.videoId} className="grid grid-cols-[80px_1fr_120px_50px] gap-2 px-4 py-2.5 border-b border-border/50 hover:bg-bg-elev/30 transition-colors items-center cursor-pointer" onClick={() => setOpenVideoId(v.videoId)}>
+                      <div
+                        key={v.videoId}
+                        className={cn(
+                          "grid gap-2 px-4 py-2.5 border-b border-border/50 hover:bg-bg-elev/30 transition-colors items-center cursor-pointer",
+                          isViewer ? "grid-cols-[80px_1fr_120px]" : "grid-cols-[80px_1fr_120px_50px]"
+                        )}
+                        onClick={() => setOpenVideoId(v.videoId)}
+                      >
                         <div className="w-16 h-12 rounded-md overflow-hidden bg-bg-elev shrink-0">
                           <SafeThumbnail
                             src={v.thumbnailUrl}
@@ -1572,11 +1590,13 @@ function MarchEduSkillDashboard() {
                           </p>
                         </div>
                         <span className="text-[10px] text-fg-muted">{new Date(v.uploadedAt).toLocaleDateString()}</span>
-                        <div className="text-right">
-                          <button onClick={(e) => { e.stopPropagation(); handleDeleteVideo(v.videoId); }} className="text-rose-500 hover:text-rose-400 p-1 transition-colors cursor-pointer text-xs">
-                            🗑️
-                          </button>
-                        </div>
+                        {!isViewer && (
+                          <div className="text-right">
+                            <button onClick={(e) => { e.stopPropagation(); handleDeleteVideo(v.videoId); }} className="text-rose-500 hover:text-rose-400 p-1 transition-colors cursor-pointer text-xs">
+                              🗑️
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

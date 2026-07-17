@@ -42,6 +42,9 @@ export async function GET(req: Request) {
 export async function PUT(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+  if (user.role === "eduskill_viewer") {
+    return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+  }
 
   const body = await req.json();
   const { userId, name, age, dob, subjects, avatarUrl, gender, teachingSubject, cohort, examTarget } = body;

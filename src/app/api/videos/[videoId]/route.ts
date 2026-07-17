@@ -78,6 +78,9 @@ export async function DELETE(
   const video = scanRes.Items?.[0] as Video | undefined;
   if (!video) return NextResponse.json({ error: "Video not found" }, { status: 404 });
 
+  if (user.role === "eduskill_viewer") {
+    return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+  }
   // Faculty can only delete their own videos. Managers/admins can delete any.
   if (user.role === "eduskill_faculty" && video.facultyId !== user.userId) {
     return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
@@ -134,6 +137,9 @@ export async function POST(
 
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+  if (user.role === "eduskill_viewer") {
+    return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+  }
 
   const { videoId } = await ctx.params;
 
