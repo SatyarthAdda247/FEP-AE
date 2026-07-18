@@ -55,6 +55,9 @@ function ManagerDashboardContent() {
   useEffect(() => {
     if (urlFacultyId) {
       setSelectedFaculty(urlFacultyId);
+      // Arriving via a profile link (e.g. from Selected Candidates) —
+      // the detail pane lives in the roster view
+      setView("roster");
     }
   }, [urlFacultyId]);
   const [openVideoId, setOpenVideoId] = useState<string | null>(null);

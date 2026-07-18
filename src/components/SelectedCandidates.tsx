@@ -1,6 +1,7 @@
 "use client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { Search, Loader2, Trash2, FileText, Play, UserCheck, Users, Edit2, Check, X } from "lucide-react";
 import type { SelectedCandidate } from "@/types";
@@ -45,7 +46,7 @@ export function SelectedCandidatesPanel({ cohort, readOnly }: { cohort: string; 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<EditDraft | null>(null);
 
-  const q = useQuery<{ candidates: SelectedCandidate[] }>({
+  const q = useQuery<{ candidates: (SelectedCandidate & { profileUserId?: string | null })[] }>({
     queryKey: ["selected-candidates", cohort],
     queryFn: () => fetch(`/api/selected-candidates?cohort=${encodeURIComponent(cohort)}`).then(r => r.json()),
   });
@@ -157,7 +158,15 @@ export function SelectedCandidatesPanel({ cohort, readOnly }: { cohort: string; 
                             className={cn(cellInput, "min-w-[140px]")} placeholder="Name *" />
                         ) : (
                           <>
-                            {c.name}
+                            {c.profileUserId ? (
+                              <Link href={`/manager?facultyId=${c.profileUserId}`}
+                                className="text-fg/90 hover:text-sky-500 hover:underline underline-offset-2"
+                                title="Open profile">
+                                {c.name}
+                              </Link>
+                            ) : (
+                              c.name
+                            )}
                             {c.sourceUserId && (
                               <span className="ml-2 rounded-full border border-sky-500/25 bg-sky-500/10 text-sky-500 px-1.5 py-0.5 text-[9px] uppercase tracking-wider">Roster</span>
                             )}

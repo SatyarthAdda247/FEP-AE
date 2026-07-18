@@ -21,13 +21,42 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const cohort = searchParams.get("cohort");
 
-  const r = await ddb.send(new ScanCommand({ TableName: TABLES.SELECTED }));
+  const [r, usersRes] = await Promise.all([
+    ddb.send(new ScanCommand({ TableName: TABLES.SELECTED })),
+    ddb.send(new ScanCommand({
+      TableName: TABLES.USERS,
+      ProjectionExpression: "userId, #n, phone, cohort",
+      ExpressionAttributeNames: { "#n": "name" },
+    })),
+  ]);
   let candidates = (r.Items ?? []) as SelectedCandidate[];
   if (cohort) candidates = candidates.filter(c => c.cohort === cohort);
   candidates.sort((a, b) => (a.regNo ?? a.name).localeCompare(b.regNo ?? b.name));
 
+  // Link candidates to dashboard profiles: roster-selected ones carry
+  // sourceUserId; sheet imports are matched by phone, else by name+cohort.
+  const users = (usersRes.Items ?? []) as Pick<User, "userId" | "name" | "phone" | "cohort">[];
+  const lastTen = (s?: string) => (s ?? "").replace(/\D/g, "").slice(-10);
+  const norm = (s?: string) => (s ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+  const byPhone = new Map<string, string>();
+  const byNameCohort = new Map<string, string>();
+  for (const u of users) {
+    const p = lastTen(u.phone);
+    if (p.length === 10 && !byPhone.has(p)) byPhone.set(p, u.userId);
+    const key = `${norm(u.name)}|${u.cohort ?? ""}`;
+    if (norm(u.name) && !byNameCohort.has(key)) byNameCohort.set(key, u.userId);
+  }
+  const enriched = candidates.map(c => ({
+    ...c,
+    profileUserId:
+      c.sourceUserId ??
+      byPhone.get(lastTen(c.contact)) ??
+      byNameCohort.get(`${norm(c.name)}|${c.cohort}`) ??
+      null,
+  }));
+
   return NextResponse.json({
-    candidates,
+    candidates: enriched,
     // userIds already selected — lets the roster render toggle state
     selectedUserIds: candidates.filter(c => c.sourceUserId).map(c => c.sourceUserId),
   });
