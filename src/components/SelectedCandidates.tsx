@@ -158,15 +158,18 @@ export function SelectedCandidatesPanel({ cohort, readOnly }: { cohort: string; 
                             className={cn(cellInput, "min-w-[140px]")} placeholder="Name *" />
                         ) : (
                           <>
-                            {c.profileUserId ? (
-                              <Link href={`/manager?facultyId=${c.profileUserId}`}
-                                className="text-fg/90 hover:text-sky-500 hover:underline underline-offset-2"
-                                title="Open profile">
-                                {c.name}
-                              </Link>
-                            ) : (
-                              c.name
-                            )}
+                            {(() => {
+                              const linkedId = c.profileUserId ?? (c.candidateId.startsWith("user-") ? c.candidateId.slice(5) : null);
+                              return linkedId ? (
+                                <Link href={`/faculty?facultyId=${linkedId}`}
+                                  className="text-fg/90 hover:text-sky-500 hover:underline underline-offset-2 transition-colors"
+                                  title="Open faculty profile">
+                                  {c.name}
+                                </Link>
+                              ) : (
+                                <span className="text-fg/60 italic">{c.name}</span>
+                              );
+                            })()}
                             {c.sourceUserId && (
                               <span className="ml-2 rounded-full border border-sky-500/25 bg-sky-500/10 text-sky-500 px-1.5 py-0.5 text-[9px] uppercase tracking-wider">Roster</span>
                             )}
