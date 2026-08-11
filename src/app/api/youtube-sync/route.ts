@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { ScanCommand, PutCommand, UpdateCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
-import { ddb, TABLES } from "@/lib/dynamodb";
+import { PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { ddb, TABLES, scanAll } from "@/lib/dynamodb";
 import { extractYouTubeId } from "@/lib/utils";
 import type { Video } from "@/types";
 
@@ -85,9 +85,9 @@ async function runSync() {
   console.log(`[YT Sync] Starting via GCP YouTube API at ${startedAt}`);
 
   try {
-    // 1. Load all videos
-    const videosRes = await ddb.send(new ScanCommand({ TableName: TABLES.VIDEOS }));
-    const videos = (videosRes.Items ?? []) as Video[];
+    // 1. Load all videos (paginated — a single Scan page silently
+    // truncates past DynamoDB's 1MB limit, and this table has 1500+ rows)
+    const videos = await scanAll({ TableName: TABLES.VIDEOS }) as unknown as Video[];
     console.log(`[YT Sync] ${videos.length} total videos`);
 
     // 2. Unique YouTube IDs
@@ -112,13 +112,12 @@ async function runSync() {
     console.log(`[YT Sync] Got stats for ${statsMap.size}/${ytIds.length} videos`);
 
     // Load existing cached stats to prevent overwriting with 0/empty
-    const existingCachesRes = await ddb.send(new ScanCommand({ TableName: TABLES.YT_STATS }));
-    const existingCaches = existingCachesRes.Items ?? [];
+    const existingCaches = await scanAll({ TableName: TABLES.YT_STATS }) as Record<string, any>[];
     const cacheMap = new Map<string, any>(existingCaches.map(c => [c.facultyId, c]));
 
     // 4. Channel subscriber counts (batch size 50)
     const channelIdsFromStats = [...new Set([...statsMap.values()].map(s => s.channelId).filter(Boolean))];
-    const channelIdsFromCache = [...new Set(existingCaches.map(c => c.channelId).filter(Boolean))];
+    const channelIdsFromCache: string[] = [...new Set(existingCaches.map(c => c.channelId).filter(Boolean))];
     const channelIds = [...new Set([...channelIdsFromStats, ...channelIdsFromCache])];
 
     const channelSubsMap = new Map<string, number>();

@@ -101,24 +101,11 @@ export async function POST(req: Request) {
       console.warn("email-index GSI query failed, falling back to scan:", gsiErr);
     }
 
-    // Fallback: scan with filter expression
-    if (!user) {
-      console.log(`Falling back to scan filter for email: "${normalizedEmail}"`);
-      const scanResult = await ddb.send(
-        new ScanCommand({
-          TableName: TABLES.USERS,
-          FilterExpression: "email = :e",
-          ExpressionAttributeValues: { ":e": normalizedEmail },
-          Limit: 50,
-        })
-      );
-      user = scanResult.Items?.[0] as User | undefined;
-      if (user) {
-        console.log(`User found via ScanCommand filter: ${user.userId}`);
-      }
-    }
-
-    // Last resort: case-insensitive paginated scan match (handles emails stored in mixed case or with spaces)
+    // Last resort: case-insensitive paginated scan match (handles emails
+    // stored in mixed case or with spaces, and covers a transient GSI miss —
+    // a single-page Scan with a small Limit here would only ever succeed in
+    // cases the GSI query above already covers, so there's no bounded
+    // "quick fallback" worth doing; go straight to the full paginated scan)
     if (!user) {
       console.log(`Starting paginated full scan case-insensitive check for: "${normalizedEmail}"`);
       let lastKey: Record<string, any> | undefined;

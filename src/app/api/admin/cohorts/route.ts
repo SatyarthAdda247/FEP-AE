@@ -3,14 +3,10 @@ import { ScanCommand, PutCommand, UpdateCommand, DeleteCommand } from "@aws-sdk/
 import { randomBytes } from "crypto";
 import { v4 as uuid } from "uuid";
 import { ddb, TABLES, scanAll } from "@/lib/dynamodb";
-import { getCurrentUser } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import type { Cohort, User } from "@/types";
 
-async function requireAdmin() {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "eduskill_admin") return null;
-  return user;
-}
+const requireAdmin = () => requireRole(["eduskill_admin"]);
 
 // URL-safe, unambiguous (no 0/O, 1/l/I) invite code
 function generateInviteCode(): string {

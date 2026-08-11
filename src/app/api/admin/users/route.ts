@@ -1,25 +1,20 @@
 import { NextResponse } from "next/server";
-import { ScanCommand, PutCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
-import { ddb, TABLES } from "@/lib/dynamodb";
-import { getCurrentUser } from "@/lib/auth";
+import { GetCommand, PutCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
+import { ddb, TABLES, scanAll } from "@/lib/dynamodb";
+import { requireRole } from "@/lib/auth";
 import { v4 as uuid } from "uuid";
 import bcrypt from "bcryptjs";
 import type { User, Role } from "@/types";
 
-// Only eduskill_admin can access this
-async function requireAdmin() {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "eduskill_admin") return null;
-  return user;
-}
+const requireAdmin = () => requireRole(["eduskill_admin"]);
 
 // GET — list all users
 export async function GET() {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
 
-  const r = await ddb.send(new ScanCommand({ TableName: TABLES.USERS }));
-  const users = ((r.Items ?? []) as User[]).map(u => {
+  const items = await scanAll({ TableName: TABLES.USERS });
+  const users = (items as unknown as User[]).map(u => {
     const { passwordHash: _, ...rest } = u;
     return rest;
   });
@@ -71,16 +66,9 @@ export async function PUT(req: Request) {
   const { userId, name, email, phone, role, subjects, teachingSubject, examTarget, cohort } = body;
   if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
 
-  // Find the user to get their partition key
-  const r = await ddb.send(
-    new ScanCommand({
-      TableName: TABLES.USERS,
-      FilterExpression: "userId = :u",
-      ExpressionAttributeValues: { ":u": userId },
-    })
-  );
-  const user = r.Items?.[0];
-  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+  // userId is the table's partition key — a direct Get, not a Scan
+  const existing = await ddb.send(new GetCommand({ TableName: TABLES.USERS, Key: { userId } }));
+  if (!existing.Item) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
   const validRoles: Role[] = ["eduskill_faculty", "eduskill_manager", "eduskill_admin"];
   if (role && !validRoles.includes(role)) {
@@ -142,16 +130,9 @@ export async function DELETE(req: Request) {
   const { userId } = await req.json();
   if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
 
-  // Find the user to get their partition key
-  const r = await ddb.send(
-    new ScanCommand({
-      TableName: TABLES.USERS,
-      FilterExpression: "userId = :u",
-      ExpressionAttributeValues: { ":u": userId },
-    })
-  );
-  const user = r.Items?.[0];
-  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+  // userId is the table's partition key — a direct Get, not a Scan
+  const existing = await ddb.send(new GetCommand({ TableName: TABLES.USERS, Key: { userId } }));
+  if (!existing.Item) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
   await ddb.send(
     new DeleteCommand({ TableName: TABLES.USERS, Key: { userId } })

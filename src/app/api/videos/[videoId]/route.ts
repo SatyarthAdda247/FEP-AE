@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { GetCommand, QueryCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
-import { ddb, TABLES } from "@/lib/dynamodb";
+import { GetCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { ddb, TABLES, scanAll } from "@/lib/dynamodb";
 import { getCurrentUser } from "@/lib/auth";
 import type { GradiAnalysis, ManagerRating, Video } from "@/types";
 
@@ -26,14 +26,12 @@ export async function GET(
     );
     video = r.Items?.[0] as Video | undefined;
   } else {
-    const r = await ddb.send(
-      new ScanCommand({
-        TableName: TABLES.VIDEOS,
-        FilterExpression: "videoId = :v",
-        ExpressionAttributeValues: { ":v": videoId },
-      })
-    );
-    video = r.Items?.[0] as Video | undefined;
+    const items = await scanAll({
+      TableName: TABLES.VIDEOS,
+      FilterExpression: "videoId = :v",
+      ExpressionAttributeValues: { ":v": videoId },
+    });
+    video = items[0] as unknown as Video | undefined;
   }
 
   if (!video) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -67,15 +65,13 @@ export async function DELETE(
   const { videoId } = await ctx.params;
 
   // 1. Find the video to get its facultyId
-  const scanRes = await ddb.send(
-    new ScanCommand({
-      TableName: TABLES.VIDEOS,
-      FilterExpression: "videoId = :v",
-      ExpressionAttributeValues: { ":v": videoId },
-    })
-  );
+  const scanItems = await scanAll({
+    TableName: TABLES.VIDEOS,
+    FilterExpression: "videoId = :v",
+    ExpressionAttributeValues: { ":v": videoId },
+  });
 
-  const video = scanRes.Items?.[0] as Video | undefined;
+  const video = scanItems[0] as unknown as Video | undefined;
   if (!video) return NextResponse.json({ error: "Video not found" }, { status: 404 });
 
   if (user.role === "eduskill_viewer") {
@@ -144,15 +140,13 @@ export async function POST(
   const { videoId } = await ctx.params;
 
   // 1. Find the video to get its youtubeUrl and facultyId
-  const scanRes = await ddb.send(
-    new ScanCommand({
-      TableName: TABLES.VIDEOS,
-      FilterExpression: "videoId = :v",
-      ExpressionAttributeValues: { ":v": videoId },
-    })
-  );
+  const scanItems = await scanAll({
+    TableName: TABLES.VIDEOS,
+    FilterExpression: "videoId = :v",
+    ExpressionAttributeValues: { ":v": videoId },
+  });
 
-  const video = scanRes.Items?.[0] as Video | undefined;
+  const video = scanItems[0] as unknown as Video | undefined;
   if (!video) return NextResponse.json({ error: "Video not found" }, { status: 404 });
 
   // Update status to analyzing

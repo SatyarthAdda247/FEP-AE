@@ -3,11 +3,10 @@ import { v4 as uuid } from "uuid";
 import {
   PutCommand,
   QueryCommand,
-  ScanCommand,
   UpdateCommand,
   GetCommand,
 } from "@aws-sdk/lib-dynamodb";
-import { ddb, TABLES } from "@/lib/dynamodb";
+import { ddb, TABLES, scanAll } from "@/lib/dynamodb";
 import { getCurrentUser } from "@/lib/auth";
 import { extractYouTubeId, youtubeThumb } from "@/lib/utils";
 import { analyzeWithGradi, processPendingQueue, hasYouTubeTranscript } from "@/lib/gradi";
@@ -19,8 +18,7 @@ async function attachRatings(videos: Video[]): Promise<(Video & { managerRating:
   
   let ratings: ManagerRating[] = [];
   if (videoIds.length > 10) {
-    const ratingsRes = await ddb.send(new ScanCommand({ TableName: TABLES.RATINGS }));
-    const allRatings = (ratingsRes.Items ?? []) as ManagerRating[];
+    const allRatings = await scanAll({ TableName: TABLES.RATINGS }) as unknown as ManagerRating[];
     ratings = allRatings.filter((r) => videoIds.includes(r.videoId));
   } else {
     const ratingPromises = videoIds.map((vId) =>
@@ -109,9 +107,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ videos: videosWithRatings });
   }
 
-  const r = await ddb.send(new ScanCommand({ TableName: TABLES.VIDEOS }));
-  const videos = r.Items ?? [];
-  const videosWithRatings = await attachRatings(videos as Video[]);
+  const videos = await scanAll({ TableName: TABLES.VIDEOS });
+  const videosWithRatings = await attachRatings(videos as unknown as Video[]);
   processPendingQueue();
   return NextResponse.json({ videos: videosWithRatings });
 }
@@ -158,13 +155,10 @@ export async function POST(req: Request) {
   }
 
   // Prevent uploading the same video twice
-  const scanRes = await ddb.send(
-    new ScanCommand({
-      TableName: TABLES.VIDEOS,
-      ProjectionExpression: "youtubeUrl",
-    })
-  );
-  const existingVideos = (scanRes.Items ?? []) as { youtubeUrl: string }[];
+  const existingVideos = await scanAll({
+    TableName: TABLES.VIDEOS,
+    ProjectionExpression: "youtubeUrl",
+  }) as unknown as { youtubeUrl: string }[];
   const isDuplicate = existingVideos.some((v) => {
     const existingId = extractYouTubeId(v.youtubeUrl);
     return existingId === newYtId;

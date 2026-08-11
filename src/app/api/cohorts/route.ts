@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { ScanCommand } from "@aws-sdk/lib-dynamodb";
-import { ddb, TABLES } from "@/lib/dynamodb";
+import { TABLES, scanAll } from "@/lib/dynamodb";
 import { getCurrentUser } from "@/lib/auth";
 import type { User } from "@/types";
 
@@ -13,18 +12,18 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const cohort = searchParams.get("cohort");
 
-  const res = await ddb.send(new ScanCommand({
+  const items = await scanAll({
     TableName: TABLES.USERS,
     FilterExpression: "#r = :f OR (#r = :m AND cohort = :march)",
     ExpressionAttributeNames: { "#r": "role" },
-    ExpressionAttributeValues: { 
+    ExpressionAttributeValues: {
       ":f": "eduskill_faculty",
       ":m": "eduskill_manager",
       ":march": "March EduSkill"
     },
-  }));
+  });
 
-  const allFaculty = (res.Items ?? []) as User[];
+  const allFaculty = items as unknown as User[];
   
   // Get unique cohorts
   const cohortSet = new Set<string>();

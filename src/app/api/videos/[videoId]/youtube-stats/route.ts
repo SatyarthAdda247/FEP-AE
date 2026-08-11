@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { extractYouTubeId } from "@/lib/utils";
-import { ScanCommand } from "@aws-sdk/lib-dynamodb";
-import { ddb, TABLES } from "@/lib/dynamodb";
+import { TABLES, scanAll } from "@/lib/dynamodb";
 
 const getApiKey = () => process.env.YOUTUBE_API_KEY ?? "";
 
@@ -13,15 +12,13 @@ export async function GET(_req: Request, ctx: { params: Promise<{ videoId: strin
   const { videoId } = await ctx.params;
 
   // Get video from DB to get YouTube URL
-  const res = await ddb.send(
-    new ScanCommand({
-      TableName: TABLES.VIDEOS,
-      FilterExpression: "videoId = :v",
-      ExpressionAttributeValues: { ":v": videoId },
-    })
-  );
+  const items = await scanAll({
+    TableName: TABLES.VIDEOS,
+    FilterExpression: "videoId = :v",
+    ExpressionAttributeValues: { ":v": videoId },
+  });
 
-  const video = res.Items?.[0];
+  const video = items[0];
   if (!video?.youtubeUrl) {
     return NextResponse.json({ error: "Video not found" }, { status: 404 });
   }

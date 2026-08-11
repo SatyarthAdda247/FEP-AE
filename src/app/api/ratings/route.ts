@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { PutCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
-import { ddb, TABLES } from "@/lib/dynamodb";
+import { PutCommand } from "@aws-sdk/lib-dynamodb";
+import { ddb, TABLES, scanAll } from "@/lib/dynamodb";
 import { getCurrentUser } from "@/lib/auth";
 import type { ManagerRating, Video } from "@/types";
 
@@ -50,15 +50,15 @@ export async function POST(req: Request) {
 
   await ddb.send(new PutCommand({ TableName: TABLES.RATINGS, Item: rating }));
 
-  // Find owning faculty to update video status to manager_rated
-  const v = await ddb.send(
-    new ScanCommand({
-      TableName: TABLES.VIDEOS,
-      FilterExpression: "videoId = :v",
-      ExpressionAttributeValues: { ":v": videoId },
-    })
-  );
-  const video = v.Items?.[0] as Video | undefined;
+  // Find owning faculty to update video status to manager_rated.
+  // fep-videos has no GSI on videoId (composite key is facultyId+videoId),
+  // so this must Scan — paginated so a truncated page can't drop the video.
+  const videoItems = await scanAll({
+    TableName: TABLES.VIDEOS,
+    FilterExpression: "videoId = :v",
+    ExpressionAttributeValues: { ":v": videoId },
+  });
+  const video = videoItems[0] as unknown as Video | undefined;
   if (video) {
     const { UpdateCommand } = await import("@aws-sdk/lib-dynamodb");
     await ddb.send(

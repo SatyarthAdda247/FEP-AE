@@ -1,32 +1,23 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import type { JWTPayload } from "@/types";
+import { getJwtSecretKey, normalizeRole } from "@/lib/jwt";
+import type { JWTPayload, Role } from "@/types";
 
 const COOKIE_NAME = "fep_token";
 
 export async function signToken(payload: JWTPayload): Promise<string> {
-  const secretKey = new TextEncoder().encode(
-    process.env.JWT_SECRET || "dev-secret-change-me"
-  );
   return await new SignJWT({ ...payload })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
-    .sign(secretKey);
+    .sign(getJwtSecretKey());
 }
 
 export async function verifyToken(token: string): Promise<JWTPayload | null> {
   try {
-    const secretKey = new TextEncoder().encode(
-      process.env.JWT_SECRET || "dev-secret-change-me"
-    );
-    const { payload } = await jwtVerify(token, secretKey);
+    const { payload } = await jwtVerify(token, getJwtSecretKey());
     const typed = payload as unknown as JWTPayload;
-    if (typed && typed.role) {
-      if (typed.role === "fep_faculty" as any) typed.role = "eduskill_faculty";
-      if (typed.role === "fep_manager" as any) typed.role = "eduskill_manager";
-      if (typed.role === "fep_admin" as any) typed.role = "eduskill_admin";
-    }
+    if (typed) typed.role = normalizeRole(typed.role as Role);
     return typed;
   } catch {
     return null;
@@ -59,6 +50,14 @@ export async function getCurrentUser(): Promise<JWTPayload | null> {
 export async function requireUser(): Promise<JWTPayload> {
   const u = await getCurrentUser();
   if (!u) throw new Error("UNAUTHORIZED");
+  return u;
+}
+
+/** Returns the current user if their role is in `roles`, else null.
+ *  Use in API routes: `const admin = await requireRole(["eduskill_admin"]);` */
+export async function requireRole(roles: Role[]): Promise<JWTPayload | null> {
+  const u = await getCurrentUser();
+  if (!u || !roles.includes(u.role)) return null;
   return u;
 }
 

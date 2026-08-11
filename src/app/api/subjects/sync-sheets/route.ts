@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
-import { PutCommand, ScanCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
-import { ddb, TABLES } from "@/lib/dynamodb";
+import { PutCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
+import { ddb, TABLES, scanAll } from "@/lib/dynamodb";
+
+// fep-subjects doubles as storage for the saved program archive (see
+// archive/route.ts) — never delete that row when rebuilding subjects.
+const ARCHIVE_PK = "fep-program-archive";
 import { getCurrentUser } from "@/lib/auth";
 
 // Raw data fallback if no Google Sheet is loaded
@@ -334,9 +338,11 @@ export async function GET(req: Request) {
     subjectsMap = parsed.subjectsMap;
   }
 
-  // Clear current subjects table and rebuild it dynamically
-  const scanRes = await ddb.send(new ScanCommand({ TableName: TABLES.SUBJECTS }));
-  for (const item of scanRes.Items ?? []) {
+  // Clear current subjects table and rebuild it dynamically — but never
+  // touch the saved program archive row that shares this table.
+  const existingItems = await scanAll({ TableName: TABLES.SUBJECTS });
+  for (const item of existingItems) {
+    if (item.subjectId === ARCHIVE_PK) continue;
     await ddb.send(new DeleteCommand({ TableName: TABLES.SUBJECTS, Key: { subjectId: item.subjectId } }));
   }
 

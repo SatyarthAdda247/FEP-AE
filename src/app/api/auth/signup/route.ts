@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { QueryCommand, PutCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
+import { QueryCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { v4 as uuid } from "uuid";
-import { ddb, TABLES } from "@/lib/dynamodb";
+import { ddb, TABLES, scanAll } from "@/lib/dynamodb";
 import type { Cohort, User } from "@/types";
 
 // Public — self-registration via a cohort invite link.
@@ -52,13 +52,13 @@ export async function POST(req: Request) {
 
     // Capacity check — enrolled = members not pending/rejected (legacy users have no status)
     if (cohort.capacity) {
-      const members = await ddb.send(new ScanCommand({
+      const memberItems = await scanAll({
         TableName: TABLES.USERS,
         FilterExpression: "cohort = :c",
         ExpressionAttributeValues: { ":c": cohort.name },
         ProjectionExpression: "approvalStatus",
-      }));
-      const enrolled = (members.Items ?? []).filter(
+      });
+      const enrolled = memberItems.filter(
         m => m.approvalStatus !== "pending" && m.approvalStatus !== "rejected"
       ).length;
       if (enrolled >= cohort.capacity) {

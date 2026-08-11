@@ -1,14 +1,10 @@
 import { NextResponse } from "next/server";
-import { ScanCommand, PutCommand, DeleteCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
-import { ddb, TABLES } from "@/lib/dynamodb";
-import { getCurrentUser } from "@/lib/auth";
+import { GetCommand, PutCommand, DeleteCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { ddb, TABLES, scanAll } from "@/lib/dynamodb";
+import { getCurrentUser, requireRole } from "@/lib/auth";
 import type { SelectedCandidate, User } from "@/types";
 
-async function requireManager() {
-  const user = await getCurrentUser();
-  if (!user || (user.role !== "eduskill_manager" && user.role !== "eduskill_admin")) return null;
-  return user;
-}
+const requireManager = () => requireRole(["eduskill_manager", "eduskill_admin"]);
 
 // GET ?cohort= — selected candidates for a cohort (all cohorts if omitted).
 // Viewers may read; only managers/admins may mutate.
@@ -21,21 +17,21 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const cohort = searchParams.get("cohort");
 
-  const [r, usersRes] = await Promise.all([
-    ddb.send(new ScanCommand({ TableName: TABLES.SELECTED })),
-    ddb.send(new ScanCommand({
+  const [selectedItems, userItems] = await Promise.all([
+    scanAll({ TableName: TABLES.SELECTED }),
+    scanAll({
       TableName: TABLES.USERS,
       ProjectionExpression: "userId, #n, phone, cohort",
       ExpressionAttributeNames: { "#n": "name" },
-    })),
+    }),
   ]);
-  let candidates = (r.Items ?? []) as SelectedCandidate[];
+  let candidates = selectedItems as unknown as SelectedCandidate[];
   if (cohort) candidates = candidates.filter(c => c.cohort === cohort);
   candidates.sort((a, b) => (a.regNo ?? a.name).localeCompare(b.regNo ?? b.name));
 
   // Link candidates to dashboard profiles: roster-selected ones carry
   // sourceUserId; sheet imports are matched by phone, else by name+cohort.
-  const users = (usersRes.Items ?? []) as Pick<User, "userId" | "name" | "phone" | "cohort">[];
+  const users = userItems as unknown as Pick<User, "userId" | "name" | "phone" | "cohort">[];
   const lastTen = (s?: string) => (s ?? "").replace(/\D/g, "").slice(-10);
   const norm = (s?: string) => (s ?? "").toLowerCase().replace(/\s+/g, " ").trim();
   const byPhone = new Map<string, string>();
@@ -72,23 +68,16 @@ export async function POST(req: Request) {
 
   const candidateId = `user-${userId}`;
 
-  // Toggle off if already selected
-  const existing = await ddb.send(new ScanCommand({
-    TableName: TABLES.SELECTED,
-    FilterExpression: "candidateId = :c",
-    ExpressionAttributeValues: { ":c": candidateId },
-  }));
-  if (existing.Items?.length) {
+  // Toggle off if already selected — candidateId is the table's partition key
+  const existing = await ddb.send(new GetCommand({ TableName: TABLES.SELECTED, Key: { candidateId } }));
+  if (existing.Item) {
     await ddb.send(new DeleteCommand({ TableName: TABLES.SELECTED, Key: { candidateId } }));
     return NextResponse.json({ selected: false });
   }
 
-  const userRes = await ddb.send(new ScanCommand({
-    TableName: TABLES.USERS,
-    FilterExpression: "userId = :u",
-    ExpressionAttributeValues: { ":u": userId },
-  }));
-  const user = userRes.Items?.[0] as User | undefined;
+  // userId is the fep-users table's partition key
+  const userRes = await ddb.send(new GetCommand({ TableName: TABLES.USERS, Key: { userId } }));
+  const user = userRes.Item as User | undefined;
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
   const candidate: SelectedCandidate = {

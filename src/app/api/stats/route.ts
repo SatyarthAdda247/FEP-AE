@@ -1,13 +1,12 @@
 import { NextResponse, after } from "next/server";
 import {
   QueryCommand,
-  ScanCommand,
   BatchGetCommand,
   GetCommand,
   UpdateCommand,
   PutCommand,
 } from "@aws-sdk/lib-dynamodb";
-import { ddb, TABLES } from "@/lib/dynamodb";
+import { ddb, TABLES, scanAll } from "@/lib/dynamodb";
 import { getCurrentUser } from "@/lib/auth";
 import type { GradiAnalysis, ManagerRating, User, Video, JWTPayload } from "@/types";
 import { processPendingQueue } from "@/lib/gradi";
@@ -638,26 +637,26 @@ async function aggregateAll(
   loggedInUser?: JWTPayload,
   week: string = "all"
 ) {
-  // 1. Scan USERS to find faculty/promoted managers in the cohort
-  const usersRes = await ddb.send(
-    new ScanCommand({
-      TableName: TABLES.USERS,
-      FilterExpression: "(#r = :f OR #r = :m) AND cohort = :c",
-      ExpressionAttributeNames: { "#r": "role" },
-      ExpressionAttributeValues: {
-        ":f": "eduskill_faculty",
-        ":m": "eduskill_manager",
-        ":c": cohort,
-      },
-    })
-  );
+  // 1. Scan USERS to find faculty/promoted managers in the cohort.
+  // Paginated: a single Scan page silently truncates past ~350 rows on
+  // this table, which would drop faculty from the leaderboard.
+  const userItems = await scanAll({
+    TableName: TABLES.USERS,
+    FilterExpression: "(#r = :f OR #r = :m) AND cohort = :c",
+    ExpressionAttributeNames: { "#r": "role" },
+    ExpressionAttributeValues: {
+      ":f": "eduskill_faculty",
+      ":m": "eduskill_manager",
+      ":c": cohort,
+    },
+  });
 
-  const users = (usersRes.Items ?? []) as User[];
+  const users = userItems as unknown as User[];
   const facultyIds = users.map((u) => u.userId);
 
-  // 2. Fetch all videos using a single ScanCommand (optimized to avoid N+1 queries)
-  const videosRes = await ddb.send(new ScanCommand({ TableName: TABLES.VIDEOS }));
-  const allVideos = (videosRes.Items ?? []) as Video[];
+  // 2. Fetch all videos — paginated for the same reason (1500+ rows already)
+  const videoItems = await scanAll({ TableName: TABLES.VIDEOS });
+  const allVideos = videoItems as unknown as Video[];
   const videos = allVideos.filter((v) => facultyIds.includes(v.facultyId));
 
   let filteredVideos = videos;
@@ -672,11 +671,10 @@ async function aggregateAll(
 
   const videoIds = filteredVideos.map((v) => v.videoId);
 
-  // 3. Fetch all ratings using a single ScanCommand (optimized to avoid N+1 queries)
+  // 3. Fetch all ratings (paginated — see note above)
   const ratings: ManagerRating[] = [];
   if (videoIds.length > 0) {
-    const ratingsRes = await ddb.send(new ScanCommand({ TableName: TABLES.RATINGS }));
-    const allRatings = (ratingsRes.Items ?? []) as ManagerRating[];
+    const allRatings = await scanAll({ TableName: TABLES.RATINGS }) as unknown as ManagerRating[];
     ratings.push(...allRatings.filter((r) => videoIds.includes(r.videoId)));
   }
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { ScanCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
-import { ddb, TABLES } from "@/lib/dynamodb";
+import { GetCommand } from "@aws-sdk/lib-dynamodb";
+import { ddb, TABLES, scanAll } from "@/lib/dynamodb";
 import { getCurrentUser } from "@/lib/auth";
 import type { User } from "@/types";
 
@@ -12,19 +12,17 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const subjectId = searchParams.get("subjectId");
 
-  const r = await ddb.send(
-    new ScanCommand({
-      TableName: TABLES.USERS,
-      FilterExpression: "#r = :f OR (#r = :m AND cohort = :march)",
-      ExpressionAttributeNames: { "#r": "role" },
-      ExpressionAttributeValues: { 
-        ":f": "eduskill_faculty",
-        ":m": "eduskill_manager",
-        ":march": "March EduSkill"
-      },
-    })
-  );
-  let items = (r.Items ?? []) as User[];
+  const scanned = await scanAll({
+    TableName: TABLES.USERS,
+    FilterExpression: "#r = :f OR (#r = :m AND cohort = :march)",
+    ExpressionAttributeNames: { "#r": "role" },
+    ExpressionAttributeValues: {
+      ":f": "eduskill_faculty",
+      ":m": "eduskill_manager",
+      ":march": "March EduSkill"
+    },
+  });
+  let items = scanned as unknown as User[];
   if (subjectId) {
     items = items.filter((u) => (u.subjects ?? []).includes(subjectId));
   }

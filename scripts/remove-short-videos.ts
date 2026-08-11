@@ -10,7 +10,8 @@ const client = new DynamoDBClient({
 });
 
 const ddb = DynamoDBDocumentClient.from(client);
-const YT_API_KEY = "AIzaSyB7u1Gb5DbKiI_LgLBAsnfjG4JouBkTpAs";
+const YT_API_KEY = process.env.YOUTUBE_API_KEY;
+if (!YT_API_KEY) { throw new Error("Set YOUTUBE_API_KEY in .env.local before running this script"); }
 
 function extractYouTubeId(url: string): string | null {
   if (!url) return null;

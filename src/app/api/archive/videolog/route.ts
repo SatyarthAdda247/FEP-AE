@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { ScanCommand, BatchGetCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
-import { ddb, TABLES } from "@/lib/dynamodb";
+import { BatchGetCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { ddb, TABLES, scanAll } from "@/lib/dynamodb";
 import { getCurrentUser } from "@/lib/auth";
 import type { Video, GradiAnalysis, ManagerRating } from "@/types";
 
@@ -8,9 +8,8 @@ export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
 
-  // Get all videos
-  const videosRes = await ddb.send(new ScanCommand({ TableName: TABLES.VIDEOS }));
-  const videos = (videosRes.Items ?? []) as Video[];
+  // Get all videos (paginated — this table has 1500+ rows already)
+  const videos = await scanAll({ TableName: TABLES.VIDEOS }) as unknown as Video[];
 
   if (videos.length === 0) return NextResponse.json({ rows: [] });
 

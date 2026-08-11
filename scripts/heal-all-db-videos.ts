@@ -21,7 +21,8 @@ const ddb = DynamoDBDocumentClient.from(
 );
 
 const GRADI_URL = process.env.GRADI_API_URL || "https://gradi.ai/api/analyze-video";
-const YT_API_KEY = process.env.YOUTUBE_API_KEY || "AIzaSyB7u1Gb5DbKiI_LgLBAsnfjG4JouBkTpAs";
+const YT_API_KEY = process.env.YOUTUBE_API_KEY;
+if (!YT_API_KEY) { throw new Error("Set YOUTUBE_API_KEY in .env.local before running this script"); }
 
 function extractYouTubeId(url: string | null | undefined): string | null {
   if (!url || typeof url !== "string") return null;

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { jwtVerify } from "jose";
+import { getJwtSecretKey, normalizeRole } from "@/lib/jwt";
 
 const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/google", "/api/auth/me", "/api/auth/signup", "/join", "/api/join", "/onboarding", "/api/onboarding/claim"];
 
@@ -26,14 +27,8 @@ export default async function proxy(req: NextRequest) {
   }
 
   try {
-    const secretKey = new TextEncoder().encode(
-      process.env.JWT_SECRET || "dev-secret-change-me"
-    );
-    const { payload } = await jwtVerify(token, secretKey);
-    let role = payload.role as string;
-    if (role === "fep_faculty") role = "eduskill_faculty";
-    if (role === "fep_manager") role = "eduskill_manager";
-    if (role === "fep_admin") role = "eduskill_admin";
+    const { payload } = await jwtVerify(token, getJwtSecretKey());
+    const role = normalizeRole(payload.role as string);
 
     // Role-scoped protections (viewers browse manager views read-only)
     if (pathname.startsWith("/admin") && role !== "eduskill_admin") {
@@ -53,7 +48,6 @@ export default async function proxy(req: NextRequest) {
     }
     return NextResponse.next();
   } catch (err: any) {
-    console.error("JWT verification failed in proxy for token:", token);
     console.error("JWT verification failed in proxy:", err.message || err);
     const url = req.nextUrl.clone();
     url.pathname = "/login";
