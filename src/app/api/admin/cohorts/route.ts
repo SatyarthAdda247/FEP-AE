@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { ScanCommand, PutCommand, UpdateCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 import { randomBytes } from "crypto";
 import { v4 as uuid } from "uuid";
-import { ddb, TABLES } from "@/lib/dynamodb";
+import { ddb, TABLES, scanAll } from "@/lib/dynamodb";
 import { getCurrentUser } from "@/lib/auth";
 import type { Cohort, User } from "@/types";
 
@@ -26,18 +26,15 @@ export async function GET() {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
 
-  const [cohortsRes, usersRes] = await Promise.all([
-    ddb.send(new ScanCommand({ TableName: TABLES.COHORTS })),
-    ddb.send(new ScanCommand({
-      TableName: TABLES.USERS,
-      ProjectionExpression: "cohort, approvalStatus",
-    })),
+  const [cohortItems, userItems] = await Promise.all([
+    scanAll({ TableName: TABLES.COHORTS }),
+    scanAll({ TableName: TABLES.USERS, ProjectionExpression: "cohort, approvalStatus" }),
   ]);
 
   // Enrolled = not pending/rejected (legacy records have no approvalStatus)
   const enrolledCounts = new Map<string, number>();
   const pendingCounts = new Map<string, number>();
-  for (const u of (usersRes.Items ?? []) as Pick<User, "cohort" | "approvalStatus">[]) {
+  for (const u of userItems as Pick<User, "cohort" | "approvalStatus">[]) {
     if (!u.cohort) continue;
     if (u.approvalStatus === "pending") {
       pendingCounts.set(u.cohort, (pendingCounts.get(u.cohort) ?? 0) + 1);
@@ -46,7 +43,7 @@ export async function GET() {
     }
   }
 
-  const cohorts = ((cohortsRes.Items ?? []) as Cohort[])
+  const cohorts = (cohortItems as unknown as Cohort[])
     .map(c => ({
       ...c,
       memberCount: enrolledCounts.get(c.name) ?? 0,

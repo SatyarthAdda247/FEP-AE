@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { ScanCommand, QueryCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { QueryCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import bcrypt from "bcryptjs";
-import { ddb, TABLES } from "@/lib/dynamodb";
+import { ddb, TABLES, scanAll } from "@/lib/dynamodb";
 import { signToken, setAuthCookie } from "@/lib/auth";
 import type { User } from "@/types";
 
@@ -9,23 +9,15 @@ function normalizePhone(raw: string): string {
   return raw.replace(/\D/g, "").slice(-10);
 }
 
-// No phone-index GSI exists yet, and a single Scan page can silently
-// truncate on a large table — page through fully so a real account is
-// never missed.
+// No phone-index GSI exists yet — scanAll pages through the full table so
+// a real account is never missed to a truncated single Scan page.
 async function findByPhone(phone: string): Promise<User | undefined> {
-  let lastKey: Record<string, unknown> | undefined;
-  do {
-    const page = await ddb.send(new ScanCommand({
-      TableName: TABLES.USERS,
-      FilterExpression: "phone = :p",
-      ExpressionAttributeValues: { ":p": phone },
-      ExclusiveStartKey: lastKey,
-    }));
-    const hit = (page.Items ?? [])[0] as User | undefined;
-    if (hit) return hit;
-    lastKey = page.LastEvaluatedKey;
-  } while (lastKey);
-  return undefined;
+  const items = await scanAll({
+    TableName: TABLES.USERS,
+    FilterExpression: "phone = :p",
+    ExpressionAttributeValues: { ":p": phone },
+  });
+  return items[0] as unknown as User | undefined;
 }
 
 // GET ?phone= — public lookup so the onboarding form can greet an

@@ -1,5 +1,5 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, ScanCommand, type ScanCommandInput } from "@aws-sdk/lib-dynamodb";
 
 const client = new DynamoDBClient({
   region: process.env.AWS_REGION,
@@ -26,3 +26,21 @@ export const TABLES = {
   SUBJECTS: "fep-subjects",
   YT_STATS: "fep-yt-stats",   // per-faculty YouTube aggregate cache (synced hourly)
 } as const;
+
+/**
+ * A single Scan page caps at 1MB, which silently truncates results on
+ * tables past a few hundred rows (fep-users has bitten this more than
+ * once — cohort member counts and onboarding exports both undercounted
+ * because of a bare ScanCommand). Use this instead of `ddb.send(new
+ * ScanCommand(...))` for any Scan expected to return "all matching rows".
+ */
+export async function scanAll(input: ScanCommandInput): Promise<Record<string, unknown>[]> {
+  const items: Record<string, unknown>[] = [];
+  let lastKey: ScanCommandInput["ExclusiveStartKey"];
+  do {
+    const page = await ddb.send(new ScanCommand({ ...input, ExclusiveStartKey: lastKey }));
+    items.push(...(page.Items ?? []));
+    lastKey = page.LastEvaluatedKey;
+  } while (lastKey);
+  return items;
+}
