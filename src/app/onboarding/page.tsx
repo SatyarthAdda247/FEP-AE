@@ -24,43 +24,53 @@ type Draft = AddressDraft & {
 };
 const EMPTY_DRAFT: Draft = { ...EMPTY_ADDRESS, name: "", email: "", phone: "", dob: "", gender: "", tshirtSize: "", password: "", confirmPassword: "" };
 
+/** Small click-to-toggle info popover, reused wherever a field needs a
+ *  short explanation (address, t-shirt size, ...). Click-outside closes it. */
+function InfoTooltip({ label, children }: { label: string; children: React.ReactNode }) {
+  const [show, setShow] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!show) return;
+    function onClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setShow(false);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [show]);
+
+  return (
+    <div ref={ref} className="relative inline-flex">
+      <button type="button" onClick={() => setShow(s => !s)}
+        className="text-fg-dim hover:text-fg transition-colors inline-flex items-center justify-center rounded-full border-none bg-transparent p-0"
+        aria-label={label}>
+        <Info className="h-3.5 w-3.5" />
+      </button>
+      {show && (
+        <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+          className="absolute left-0 top-6 z-20 w-72 rounded-xl border border-border bg-bg-card p-3 shadow-2xl">
+          <div className="flex items-start gap-2">
+            <Package className="h-4 w-4 text-sky-500 shrink-0 mt-0.5" />
+            <p className="text-[11px] text-fg-muted leading-relaxed">{children}</p>
+          </div>
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
 /** Address section shared by both onboarding variants: proper structured
  *  lines (not one free-text field) plus an info button explaining why it
  *  matters — the joining kit ships here. */
 function AddressFields<T extends AddressDraft>({ value, onChange }: { value: T; onChange: (updater: (d: T) => T) => void }) {
-  const [showInfo, setShowInfo] = useState(false);
-  const infoRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!showInfo) return;
-    function onClickOutside(e: MouseEvent) {
-      if (infoRef.current && !infoRef.current.contains(e.target as Node)) setShowInfo(false);
-    }
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
-  }, [showInfo]);
-
   return (
     <div className="space-y-3">
-      <div ref={infoRef} className="relative flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5">
         <label className="text-[11px] text-fg-muted">Address *</label>
-        <button type="button" onClick={() => setShowInfo(s => !s)}
-          className="text-fg-dim hover:text-fg transition-colors inline-flex items-center justify-center rounded-full border-none bg-transparent p-0"
-          aria-label="Why we need your address">
-          <Info className="h-3.5 w-3.5" />
-        </button>
-        {showInfo && (
-          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-            className="absolute left-0 top-6 z-20 w-72 rounded-xl border border-border bg-bg-card p-3 shadow-2xl">
-            <div className="flex items-start gap-2">
-              <Package className="h-4 w-4 text-sky-500 shrink-0 mt-0.5" />
-              <p className="text-[11px] text-fg-muted leading-relaxed">
-                Faculty who join the <span className="text-fg font-medium">EduSkill Distance Learning</span> program
-                receive a joining kit delivered to this address — please make sure it&apos;s complete and accurate.
-              </p>
-            </div>
-          </motion.div>
-        )}
+        <InfoTooltip label="Why we need your address">
+          Faculty who join the <span className="text-fg font-medium">EduSkill Distance Learning</span> program
+          receive a joining kit delivered to this address — please make sure it&apos;s complete and accurate.
+        </InfoTooltip>
       </div>
 
       <input value={value.addressLine1} onChange={e => onChange(d => ({ ...d, addressLine1: e.target.value }))}
@@ -230,10 +240,19 @@ function ClaimAccountOnboarding() {
                 {GENDERS.map(g => <option key={g} value={g}>{g}</option>)}
               </select>
             </div>
-            <select value={draft.tshirtSize} onChange={e => setDraft(d => ({ ...d, tshirtSize: e.target.value }))} className={fieldClass}>
-              <option value="">T-Shirt Size</option>
-              {TSHIRT_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
+            <div>
+              <div className="flex items-center gap-1.5 mb-1 ml-1">
+                <label className="text-[11px] text-fg-muted">T-Shirt Size</label>
+                <InfoTooltip label="Why we ask for t-shirt size">
+                  Your t-shirt size is used to prepare the merchandise included in your{" "}
+                  <span className="text-fg font-medium">EduSkill joining kit</span> — pick the size you&apos;d normally wear.
+                </InfoTooltip>
+              </div>
+              <select value={draft.tshirtSize} onChange={e => setDraft(d => ({ ...d, tshirtSize: e.target.value }))} className={fieldClass}>
+                <option value="">T-Shirt Size</option>
+                {TSHIRT_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
 
             <div className="pt-2 border-t border-border">
               <p className="text-[11px] text-fg-muted mb-2 mt-3">Create a password for future sign-ins</p>
@@ -351,10 +370,19 @@ function AuthenticatedOnboarding() {
                 {GENDERS.map(g => <option key={g} value={g}>{g}</option>)}
               </select>
             </div>
-            <select value={draft.tshirtSize} onChange={e => setDraft(d => ({ ...d, tshirtSize: e.target.value }))} className={fieldClass}>
-              <option value="">T-Shirt Size</option>
-              {TSHIRT_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
+            <div>
+              <div className="flex items-center gap-1.5 mb-1 ml-1">
+                <label className="text-[11px] text-fg-muted">T-Shirt Size</label>
+                <InfoTooltip label="Why we ask for t-shirt size">
+                  Your t-shirt size is used to prepare the merchandise included in your{" "}
+                  <span className="text-fg font-medium">EduSkill joining kit</span> — pick the size you&apos;d normally wear.
+                </InfoTooltip>
+              </div>
+              <select value={draft.tshirtSize} onChange={e => setDraft(d => ({ ...d, tshirtSize: e.target.value }))} className={fieldClass}>
+                <option value="">T-Shirt Size</option>
+                {TSHIRT_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
 
             {error && <p className="text-xs text-rose-500">{error}</p>}
 
