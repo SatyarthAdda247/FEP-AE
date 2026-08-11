@@ -26,6 +26,10 @@ export interface User {
   videoSampleLink?: string;     // sample teaching video (YouTube/Drive), from signup
   resumeLink?: string;          // resume URL (Drive/Dropbox), from signup
   approvalStatus?: ApprovalStatus; // absent = approved (legacy/admin-created accounts)
+  address?: string;             // from onboarding form
+  tshirtSize?: string;          // from onboarding form (S/M/L/XL/XXL)
+  profileComplete?: boolean;    // false = must complete the onboarding form before using the dashboard
+  onboardedAt?: string;         // when the onboarding form was submitted
   passwordHash?: string;
   avatarUrl?: string;
   age?: number;

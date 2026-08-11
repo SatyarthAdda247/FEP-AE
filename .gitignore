@@ -13,6 +13,12 @@
 # testing
 /coverage
 
+# real user/customer data dropped into the repo root for one-off imports —
+# never commit these (names, phone numbers, revenue, resumes, etc.)
+*.xlsx
+*.xls
+!/public/**/*.xlsx
+
 # next.js
 /.next/
 /out/

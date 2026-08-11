@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Trash2, Search, Shield, Users, UserCheck, Loader2, Check, X, Edit2, Link2, Copy, Lock, Unlock, RefreshCw, UsersRound } from "lucide-react";
+import { Plus, Trash2, Search, Shield, Users, UserCheck, Loader2, Check, X, Edit2, Link2, Copy, Lock, Unlock, RefreshCw, UsersRound, Download, ClipboardCheck } from "lucide-react";
 import type { User, Role, Cohort } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -127,6 +127,9 @@ export default function AdminDashboard() {
 
       {/* Cohorts */}
       <CohortsPanel data={cohortsQ.data} isLoading={cohortsQ.isLoading} />
+
+      {/* Onboarding submissions archive */}
+      <OnboardingPanel cohortNames={cohortNames} />
 
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap mb-4">
@@ -580,6 +583,141 @@ function CohortsPanel({ data, isLoading }: { data?: CohortsResponse; isLoading: 
               </div>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface OnboardingSubmission {
+  userId: string; name: string; email: string; phone: string; cohort: string;
+  address: string; age: number | ""; gender: string; tshirtSize: string;
+  profileComplete: boolean; onboardedAt: string;
+}
+
+const CSV_COLUMNS: { key: keyof OnboardingSubmission; label: string }[] = [
+  { key: "name", label: "Name" },
+  { key: "email", label: "Email" },
+  { key: "phone", label: "Phone" },
+  { key: "cohort", label: "Cohort" },
+  { key: "address", label: "Address" },
+  { key: "age", label: "Age" },
+  { key: "gender", label: "Gender" },
+  { key: "tshirtSize", label: "T-Shirt Size" },
+  { key: "profileComplete", label: "Profile Complete" },
+  { key: "onboardedAt", label: "Onboarded At" },
+];
+
+function toCsv(rows: OnboardingSubmission[]): string {
+  const esc = (v: unknown) => {
+    const s = String(v ?? "");
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const header = CSV_COLUMNS.map(c => esc(c.label)).join(",");
+  const lines = rows.map(r => CSV_COLUMNS.map(c => esc(r[c.key])).join(","));
+  return [header, ...lines].join("\n");
+}
+
+function OnboardingPanel({ cohortNames }: { cohortNames: string[] }) {
+  const [cohortFilter, setCohortFilter] = useState("all");
+  const [search, setSearch] = useState("");
+
+  const q = useQuery<{ submissions: OnboardingSubmission[] }>({
+    queryKey: ["admin-onboarding", cohortFilter],
+    queryFn: () => fetch(`/api/admin/onboarding${cohortFilter !== "all" ? `?cohort=${encodeURIComponent(cohortFilter)}` : ""}`).then(r => r.json()),
+  });
+
+  const rows = (q.data?.submissions ?? []).filter(r =>
+    !search || r.name.toLowerCase().includes(search.toLowerCase()) || r.email.toLowerCase().includes(search.toLowerCase())
+  );
+
+  function exportCsv() {
+    const csv = toCsv(rows);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `onboarding-submissions${cohortFilter !== "all" ? `-${cohortFilter.replace(/\s+/g, "-")}` : ""}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div className="glass rounded-2xl p-5 mb-6">
+      <div className="flex items-center gap-2 mb-1">
+        <ClipboardCheck className="h-4 w-4 text-fg-muted" />
+        <h2 className="text-sm font-semibold">Onboarding Submissions</h2>
+      </div>
+      <p className="text-xs text-fg-muted mb-4">
+        Profile details faculty confirm on first login (name, email, mobile, address, age, gender, t-shirt size). Exportable as a sheet.
+      </p>
+
+      <div className="flex items-center gap-2 flex-wrap mb-4">
+        <div className="relative flex-1 min-w-[180px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-fg-muted" />
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search name or email..."
+            className="w-full rounded-full border border-border bg-bg-elev/60 pl-9 pr-3 py-2 text-sm outline-none focus:border-fg/30" />
+        </div>
+        <select value={cohortFilter} onChange={e => setCohortFilter(e.target.value)}
+          className="rounded-full border border-border bg-bg-elev/60 px-3 py-2 text-xs outline-none">
+          <option value="all">All cohorts</option>
+          {cohortNames.map(n => <option key={n} value={n}>{n}</option>)}
+        </select>
+        <button onClick={exportCsv} disabled={!rows.length}
+          className="flex items-center gap-1.5 rounded-full bg-fg px-4 py-2 text-xs font-medium text-bg disabled:opacity-40">
+          <Download className="h-3.5 w-3.5" />Export CSV
+        </button>
+      </div>
+
+      {q.isLoading ? (
+        <div className="flex h-16 items-center justify-center">
+          <Loader2 className="h-4 w-4 animate-spin text-fg-muted" />
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-border/60">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-[10px] uppercase tracking-wider text-fg-muted border-b border-border bg-bg-elev/40">
+                <th className="text-left px-4 py-2.5 font-medium">Name</th>
+                <th className="text-left px-3 py-2.5 font-medium">Email</th>
+                <th className="text-left px-3 py-2.5 font-medium">Phone</th>
+                <th className="text-left px-3 py-2.5 font-medium">Cohort</th>
+                <th className="text-left px-3 py-2.5 font-medium">Address</th>
+                <th className="text-left px-3 py-2.5 font-medium">Age</th>
+                <th className="text-left px-3 py-2.5 font-medium">Gender</th>
+                <th className="text-left px-3 py-2.5 font-medium">Size</th>
+                <th className="text-left px-4 py-2.5 font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(r => (
+                <tr key={r.userId} className="border-b border-border/60 last:border-0 hover:bg-bg-elev/40">
+                  <td className="px-4 py-2 font-medium whitespace-nowrap">{r.name}</td>
+                  <td className="px-3 py-2 text-fg-muted text-xs whitespace-nowrap">{r.email}</td>
+                  <td className="px-3 py-2 text-fg-muted text-xs whitespace-nowrap">{r.phone || "—"}</td>
+                  <td className="px-3 py-2 text-fg-muted text-xs whitespace-nowrap">{r.cohort || "—"}</td>
+                  <td className="px-3 py-2 text-fg-muted text-xs max-w-[180px] truncate">{r.address || "—"}</td>
+                  <td className="px-3 py-2 text-fg-muted text-xs">{r.age || "—"}</td>
+                  <td className="px-3 py-2 text-fg-muted text-xs whitespace-nowrap">{r.gender || "—"}</td>
+                  <td className="px-3 py-2 text-fg-muted text-xs">{r.tshirtSize || "—"}</td>
+                  <td className="px-4 py-2 whitespace-nowrap">
+                    <span className={cn(
+                      "rounded-full border px-2 py-0.5 text-[10px] font-medium",
+                      r.profileComplete
+                        ? "text-emerald-500 bg-emerald-500/10 border-emerald-500/25"
+                        : "text-amber-500 bg-amber-500/10 border-amber-500/25"
+                    )}>
+                      {r.profileComplete ? "Complete" : "Pending"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {rows.length === 0 && (
+                <tr><td colSpan={9} className="px-4 py-6 text-center text-xs text-fg-muted">No submissions found.</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
