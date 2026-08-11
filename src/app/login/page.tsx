@@ -2,7 +2,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
-import { Loader2, ShieldCheck, Sparkles, Video, Users } from "lucide-react";
+import { Loader2, ShieldCheck, Sparkles, Video, Users, Mail, Lock, ArrowRight, ClipboardCheck } from "lucide-react";
 
 declare global {
   interface Window {
@@ -44,6 +44,40 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [scriptReady, setScriptReady] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [emailLoginOpen, setEmailLoginOpen] = useState(false);
+  const [emailOrPhone, setEmailOrPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailError, setEmailError] = useState("");
+
+  async function handleEmailLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setEmailError("");
+    setEmailLoading(true);
+    try {
+      // A bare 10-digit mobile number logs in with the placeholder
+      // account email used for cohorts seeded from a phone-only list.
+      const identifier = /^\d{10}$/.test(emailOrPhone.trim())
+        ? `${emailOrPhone.trim()}@pending.eduskill`
+        : emailOrPhone.trim();
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: identifier, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Login failed");
+      const dest =
+        data.user.role === "eduskill_admin" || data.user.role === "eduskill_manager"
+          ? "/manager"
+          : "/faculty";
+      router.replace(dest);
+      router.refresh();
+    } catch (err) {
+      setEmailError(err instanceof Error ? err.message : "Login failed");
+      setEmailLoading(false);
+    }
+  }
 
   const googleClientId = "210072892963-655umnn3gls5058f0d3q2uj3rv7l2p2j.apps.googleusercontent.com";
 
@@ -365,6 +399,81 @@ export default function LoginPage() {
               )}
             </div>
           </motion.div>
+
+          {/* New-user onboarding CTA + returning-user password toggle */}
+          <div className="mt-6 space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="h-px flex-1 bg-border" />
+              <span className="text-[10px] uppercase tracking-wider text-fg-dim">or</span>
+              <span className="h-px flex-1 bg-border" />
+            </div>
+
+            <a
+              href="/onboarding"
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-border bg-bg-card px-4 py-2.5 text-sm font-medium text-fg hover:border-fg/30 transition-colors"
+            >
+              <ClipboardCheck className="h-4 w-4" />
+              New here? Set up your account
+            </a>
+
+            {!emailLoginOpen ? (
+              <button
+                onClick={() => setEmailLoginOpen(true)}
+                className="w-full text-center text-[11px] text-fg-dim hover:text-fg-muted transition-colors"
+              >
+                Already set up your account? Sign in with email &amp; password
+              </button>
+            ) : (
+              <motion.form
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                onSubmit={handleEmailLogin}
+                className="space-y-3"
+              >
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-fg-muted" />
+                  <input
+                    value={emailOrPhone}
+                    onChange={(e) => setEmailOrPhone(e.target.value)}
+                    placeholder="Email or 10-digit mobile number"
+                    autoComplete="username"
+                    required
+                    className="w-full rounded-xl border border-border bg-bg-card pl-9 pr-3 py-2.5 text-sm text-fg outline-none focus:border-fg/30"
+                  />
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-fg-muted" />
+                  <input
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    type="password"
+                    placeholder="Password"
+                    autoComplete="current-password"
+                    required
+                    className="w-full rounded-xl border border-border bg-bg-card pl-9 pr-3 py-2.5 text-sm text-fg outline-none focus:border-fg/30"
+                  />
+                </div>
+                {emailError && (
+                  <p className="text-xs text-rose-400">{emailError}</p>
+                )}
+                <button
+                  type="submit"
+                  disabled={emailLoading}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-fg px-4 py-2.5 text-sm font-medium text-bg hover:bg-fg/90 transition-colors disabled:opacity-40"
+                >
+                  {emailLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+                  Sign in
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setEmailLoginOpen(false); setEmailError(""); }}
+                  className="w-full text-center text-[11px] text-fg-dim hover:text-fg-muted transition-colors"
+                >
+                  Use Google sign-in instead
+                </button>
+              </motion.form>
+            )}
+          </div>
 
           {/* Security / Info Note */}
           <motion.div 
