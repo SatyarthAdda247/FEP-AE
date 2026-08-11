@@ -1,21 +1,89 @@
 "use client";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, ClipboardCheck, Phone, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Loader2, ClipboardCheck, Phone, ArrowRight, CheckCircle2, Info, Package } from "lucide-react";
+import { INDIAN_STATES } from "@/types";
 import type { User } from "@/types";
 
 const TSHIRT_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 const GENDERS = ["Male", "Female", "Other", "Prefer not to say"];
+const TODAY = new Date().toISOString().slice(0, 10);
 
 const fieldClass = "w-full rounded-lg border border-border bg-bg-elev px-3 py-2 text-sm text-fg outline-none focus:border-fg/30";
 
-type Draft = {
-  name: string; email: string; phone: string; address: string; age: string; gender: string; tshirtSize: string;
+type AddressDraft = {
+  addressLine1: string; addressLine2: string; city: string; state: string; pincode: string; backupPhone: string;
+};
+const EMPTY_ADDRESS: AddressDraft = { addressLine1: "", addressLine2: "", city: "", state: "", pincode: "", backupPhone: "" };
+
+type Draft = AddressDraft & {
+  name: string; email: string; phone: string; dob: string; gender: string; tshirtSize: string;
   password: string; confirmPassword: string;
 };
-const EMPTY_DRAFT: Draft = { name: "", email: "", phone: "", address: "", age: "", gender: "", tshirtSize: "", password: "", confirmPassword: "" };
+const EMPTY_DRAFT: Draft = { ...EMPTY_ADDRESS, name: "", email: "", phone: "", dob: "", gender: "", tshirtSize: "", password: "", confirmPassword: "" };
+
+/** Address section shared by both onboarding variants: proper structured
+ *  lines (not one free-text field) plus an info button explaining why it
+ *  matters — the joining kit ships here. */
+function AddressFields<T extends AddressDraft>({ value, onChange }: { value: T; onChange: (updater: (d: T) => T) => void }) {
+  const [showInfo, setShowInfo] = useState(false);
+  const infoRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showInfo) return;
+    function onClickOutside(e: MouseEvent) {
+      if (infoRef.current && !infoRef.current.contains(e.target as Node)) setShowInfo(false);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [showInfo]);
+
+  return (
+    <div className="space-y-3">
+      <div ref={infoRef} className="relative flex items-center gap-1.5">
+        <label className="text-[11px] text-fg-muted">Address *</label>
+        <button type="button" onClick={() => setShowInfo(s => !s)}
+          className="text-fg-dim hover:text-fg transition-colors inline-flex items-center justify-center rounded-full border-none bg-transparent p-0"
+          aria-label="Why we need your address">
+          <Info className="h-3.5 w-3.5" />
+        </button>
+        {showInfo && (
+          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+            className="absolute left-0 top-6 z-20 w-72 rounded-xl border border-border bg-bg-card p-3 shadow-2xl">
+            <div className="flex items-start gap-2">
+              <Package className="h-4 w-4 text-sky-500 shrink-0 mt-0.5" />
+              <p className="text-[11px] text-fg-muted leading-relaxed">
+                Faculty who join the <span className="text-fg font-medium">EduSkill Distance Learning</span> program
+                receive a joining kit delivered to this address — please make sure it&apos;s complete and accurate.
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </div>
+
+      <input value={value.addressLine1} onChange={e => onChange(d => ({ ...d, addressLine1: e.target.value }))}
+        placeholder="Address Line 1 — House/Flat No., Street *" required className={fieldClass} />
+      <input value={value.addressLine2} onChange={e => onChange(d => ({ ...d, addressLine2: e.target.value }))}
+        placeholder="Address Line 2 — Landmark, Area (optional)" className={fieldClass} />
+      <div className="grid grid-cols-2 gap-3">
+        <input value={value.city} onChange={e => onChange(d => ({ ...d, city: e.target.value }))}
+          placeholder="City *" required className={fieldClass} />
+        <select value={value.state} onChange={e => onChange(d => ({ ...d, state: e.target.value }))} required className={fieldClass}>
+          <option value="">State / UT *</option>
+          {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <input value={value.pincode} onChange={e => onChange(d => ({ ...d, pincode: e.target.value.replace(/\D/g, "").slice(0, 6) }))}
+          placeholder="Pincode *" required inputMode="numeric" className={fieldClass} />
+        <input value={value.backupPhone} onChange={e => onChange(d => ({ ...d, backupPhone: e.target.value.replace(/\D/g, "").slice(0, 10) }))}
+          placeholder="Backup Mobile No. (optional)" type="tel" inputMode="numeric" className={fieldClass} />
+      </div>
+    </div>
+  );
+}
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -148,11 +216,15 @@ function ClaimAccountOnboarding() {
               <input value={draft.phone} onChange={e => setDraft(d => ({ ...d, phone: e.target.value }))}
                 placeholder="Confirm or change your mobile number" type="tel" required className={fieldClass} />
             </div>
-            <input value={draft.address} onChange={e => setDraft(d => ({ ...d, address: e.target.value }))}
-              placeholder="Address" className={fieldClass} />
+
+            <AddressFields value={draft} onChange={updater => setDraft(d => updater(d))} />
+
             <div className="grid grid-cols-2 gap-3">
-              <input value={draft.age} onChange={e => setDraft(d => ({ ...d, age: e.target.value.replace(/\D/g, "") }))}
-                placeholder="Age" inputMode="numeric" className={fieldClass} />
+              <div>
+                <label className="block text-[11px] text-fg-muted mb-1 ml-1">Date of Birth</label>
+                <input value={draft.dob} onChange={e => setDraft(d => ({ ...d, dob: e.target.value }))}
+                  type="date" max={TODAY} className={fieldClass} />
+              </div>
               <select value={draft.gender} onChange={e => setDraft(d => ({ ...d, gender: e.target.value }))} className={fieldClass}>
                 <option value="">Gender</option>
                 {GENDERS.map(g => <option key={g} value={g}>{g}</option>)}
@@ -190,7 +262,9 @@ function ClaimAccountOnboarding() {
  *  profile — no password step, since this person already has one. */
 function AuthenticatedOnboarding() {
   const router = useRouter();
-  const [draft, setDraft] = useState({ name: "", email: "", phone: "", address: "", age: "", gender: "", tshirtSize: "" });
+  const [draft, setDraft] = useState<Omit<Draft, "password" | "confirmPassword">>({
+    ...EMPTY_ADDRESS, name: "", email: "", phone: "", dob: "", gender: "", tshirtSize: "",
+  });
   const [loaded, setLoaded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -205,8 +279,10 @@ function AuthenticatedOnboarding() {
       const u = meQ.data.user;
       setDraft({
         name: u.name ?? "", email: u.email?.includes("@pending.eduskill") ? "" : (u.email ?? ""),
-        phone: u.phone ?? "", address: u.address ?? "",
-        age: u.age !== undefined ? String(u.age) : "", gender: u.gender ?? "", tshirtSize: u.tshirtSize ?? "",
+        phone: u.phone ?? "",
+        addressLine1: u.addressLine1 ?? "", addressLine2: u.addressLine2 ?? "",
+        city: u.city ?? "", state: u.state ?? "", pincode: u.pincode ?? "", backupPhone: u.backupPhone ?? "",
+        dob: u.dob ?? "", gender: u.gender ?? "", tshirtSize: u.tshirtSize ?? "",
       });
       setLoaded(true);
     }
@@ -261,11 +337,15 @@ function AuthenticatedOnboarding() {
               <input value={draft.phone} onChange={e => setDraft(d => ({ ...d, phone: e.target.value }))}
                 placeholder="Confirm or change your mobile number" type="tel" required className={fieldClass} />
             </div>
-            <input value={draft.address} onChange={e => setDraft(d => ({ ...d, address: e.target.value }))}
-              placeholder="Address" className={fieldClass} />
+
+            <AddressFields value={draft} onChange={updater => setDraft(d => updater(d))} />
+
             <div className="grid grid-cols-2 gap-3">
-              <input value={draft.age} onChange={e => setDraft(d => ({ ...d, age: e.target.value.replace(/\D/g, "") }))}
-                placeholder="Age" inputMode="numeric" className={fieldClass} />
+              <div>
+                <label className="block text-[11px] text-fg-muted mb-1 ml-1">Date of Birth</label>
+                <input value={draft.dob} onChange={e => setDraft(d => ({ ...d, dob: e.target.value }))}
+                  type="date" max={TODAY} className={fieldClass} />
+              </div>
               <select value={draft.gender} onChange={e => setDraft(d => ({ ...d, gender: e.target.value }))} className={fieldClass}>
                 <option value="">Gender</option>
                 {GENDERS.map(g => <option key={g} value={g}>{g}</option>)}

@@ -3,6 +3,7 @@ import { QueryCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import bcrypt from "bcryptjs";
 import { ddb, TABLES, scanAll } from "@/lib/dynamodb";
 import { signToken, setAuthCookie } from "@/lib/auth";
+import { validateOnboardingExtras } from "@/lib/onboarding";
 import type { User } from "@/types";
 
 function normalizePhone(raw: string): string {
@@ -44,7 +45,7 @@ export async function GET(req: Request) {
 // the onboarding form, and log the user in.
 export async function POST(req: Request) {
   const body = await req.json();
-  const { phone, name, email, address, age, gender, tshirtSize, password, confirmPassword } = body;
+  const { phone, name, email, password, confirmPassword } = body;
 
   const cleanPhone = normalizePhone(typeof phone === "string" ? phone : "");
   const cleanName = typeof name === "string" ? name.trim() : "";
@@ -62,9 +63,10 @@ export async function POST(req: Request) {
   if (password !== confirmPassword) {
     return NextResponse.json({ error: "Passwords do not match" }, { status: 400 });
   }
-  const ageNum = age !== undefined && age !== null && age !== "" ? Number(age) : undefined;
-  if (ageNum !== undefined && (!Number.isFinite(ageNum) || ageNum < 10 || ageNum > 100)) {
-    return NextResponse.json({ error: "Invalid age" }, { status: 400 });
+
+  const extras = validateOnboardingExtras(body, cleanPhone);
+  if ("error" in extras) {
+    return NextResponse.json({ error: extras.error }, { status: 400 });
   }
 
   const target = await findByPhone(cleanPhone);
@@ -95,11 +97,8 @@ export async function POST(req: Request) {
     passwordHash: await bcrypt.hash(password, 10),
     profileComplete: true,
     onboardedAt: new Date().toISOString(),
+    ...extras.fields,
   };
-  if (address) fields.address = String(address).trim();
-  if (gender) fields.gender = String(gender).trim();
-  if (tshirtSize) fields.tshirtSize = String(tshirtSize).trim();
-  if (ageNum !== undefined) fields.age = ageNum;
 
   const parts: string[] = [];
   const names: Record<string, string> = {};

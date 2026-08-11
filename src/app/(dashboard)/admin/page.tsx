@@ -591,7 +591,8 @@ function CohortsPanel({ data, isLoading }: { data?: CohortsResponse; isLoading: 
 
 interface OnboardingSubmission {
   userId: string; name: string; email: string; phone: string; cohort: string;
-  address: string; age: number | ""; gender: string; tshirtSize: string;
+  addressLine1: string; addressLine2: string; city: string; state: string; pincode: string;
+  backupPhone: string; dob: string; gender: string; tshirtSize: string;
   profileComplete: boolean; onboardedAt: string;
 }
 
@@ -600,8 +601,13 @@ const CSV_COLUMNS: { key: keyof OnboardingSubmission; label: string }[] = [
   { key: "email", label: "Email" },
   { key: "phone", label: "Phone" },
   { key: "cohort", label: "Cohort" },
-  { key: "address", label: "Address" },
-  { key: "age", label: "Age" },
+  { key: "addressLine1", label: "Address Line 1" },
+  { key: "addressLine2", label: "Address Line 2" },
+  { key: "city", label: "City" },
+  { key: "state", label: "State" },
+  { key: "pincode", label: "Pincode" },
+  { key: "backupPhone", label: "Backup Number" },
+  { key: "dob", label: "Date of Birth" },
   { key: "gender", label: "Gender" },
   { key: "tshirtSize", label: "T-Shirt Size" },
   { key: "profileComplete", label: "Profile Complete" },
@@ -684,7 +690,11 @@ function OnboardingPanel({ cohortNames }: { cohortNames: string[] }) {
                 <th className="text-left px-3 py-2.5 font-medium">Phone</th>
                 <th className="text-left px-3 py-2.5 font-medium">Cohort</th>
                 <th className="text-left px-3 py-2.5 font-medium">Address</th>
-                <th className="text-left px-3 py-2.5 font-medium">Age</th>
+                <th className="text-left px-3 py-2.5 font-medium">City</th>
+                <th className="text-left px-3 py-2.5 font-medium">State</th>
+                <th className="text-left px-3 py-2.5 font-medium">Pincode</th>
+                <th className="text-left px-3 py-2.5 font-medium">Backup No.</th>
+                <th className="text-left px-3 py-2.5 font-medium">DOB</th>
                 <th className="text-left px-3 py-2.5 font-medium">Gender</th>
                 <th className="text-left px-3 py-2.5 font-medium">Size</th>
                 <th className="text-left px-4 py-2.5 font-medium">Status</th>
@@ -697,8 +707,14 @@ function OnboardingPanel({ cohortNames }: { cohortNames: string[] }) {
                   <td className="px-3 py-2 text-fg-muted text-xs whitespace-nowrap">{r.email}</td>
                   <td className="px-3 py-2 text-fg-muted text-xs whitespace-nowrap">{r.phone || "—"}</td>
                   <td className="px-3 py-2 text-fg-muted text-xs whitespace-nowrap">{r.cohort || "—"}</td>
-                  <td className="px-3 py-2 text-fg-muted text-xs max-w-[180px] truncate">{r.address || "—"}</td>
-                  <td className="px-3 py-2 text-fg-muted text-xs">{r.age || "—"}</td>
+                  <td className="px-3 py-2 text-fg-muted text-xs max-w-[180px] truncate" title={[r.addressLine1, r.addressLine2].filter(Boolean).join(", ")}>
+                    {[r.addressLine1, r.addressLine2].filter(Boolean).join(", ") || "—"}
+                  </td>
+                  <td className="px-3 py-2 text-fg-muted text-xs whitespace-nowrap">{r.city || "—"}</td>
+                  <td className="px-3 py-2 text-fg-muted text-xs whitespace-nowrap">{r.state || "—"}</td>
+                  <td className="px-3 py-2 text-mono text-fg-muted text-xs">{r.pincode || "—"}</td>
+                  <td className="px-3 py-2 text-mono text-fg-muted text-xs whitespace-nowrap">{r.backupPhone || "—"}</td>
+                  <td className="px-3 py-2 text-fg-muted text-xs whitespace-nowrap">{r.dob || "—"}</td>
                   <td className="px-3 py-2 text-fg-muted text-xs whitespace-nowrap">{r.gender || "—"}</td>
                   <td className="px-3 py-2 text-fg-muted text-xs">{r.tshirtSize || "—"}</td>
                   <td className="px-4 py-2 whitespace-nowrap">
@@ -714,7 +730,7 @@ function OnboardingPanel({ cohortNames }: { cohortNames: string[] }) {
                 </tr>
               ))}
               {rows.length === 0 && (
-                <tr><td colSpan={9} className="px-4 py-6 text-center text-xs text-fg-muted">No submissions found.</td></tr>
+                <tr><td colSpan={13} className="px-4 py-6 text-center text-xs text-fg-muted">No submissions found.</td></tr>
               )}
             </tbody>
           </table>

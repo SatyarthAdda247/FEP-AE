@@ -26,7 +26,13 @@ export interface User {
   videoSampleLink?: string;     // sample teaching video (YouTube/Drive), from signup
   resumeLink?: string;          // resume URL (Drive/Dropbox), from signup
   approvalStatus?: ApprovalStatus; // absent = approved (legacy/admin-created accounts)
-  address?: string;             // from onboarding form
+  address?: string;             // legacy free-text address (pre-dates structured fields below)
+  addressLine1?: string;        // from onboarding form — house/street (joining kits ship here)
+  addressLine2?: string;        // optional — landmark/area
+  city?: string;
+  state?: string;
+  pincode?: string;             // 6-digit Indian PIN code
+  backupPhone?: string;         // optional alternate contact if primary is unreachable
   tshirtSize?: string;          // from onboarding form (S/M/L/XL/XXL)
   profileComplete?: boolean;    // false = must complete the onboarding form before using the dashboard
   onboardedAt?: string;         // when the onboarding form was submitted
@@ -159,3 +165,14 @@ export const GRADI_PARAMS = [
 // Kept for backwards compat in archive section
 export const RATING_PARAMS = GRADI_PARAMS;
 export type RatingKey = (typeof GRADI_PARAMS)[number]["key"];
+
+/** Indian states & union territories — used for onboarding address validation
+ *  (client dropdown and server-side check share this one list). */
+export const INDIAN_STATES = [
+  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat",
+  "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh",
+  "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan",
+  "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
+  "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry",
+] as const;

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { GetCommand, QueryCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { ddb, TABLES } from "@/lib/dynamodb";
 import { getCurrentUser } from "@/lib/auth";
+import { validateOnboardingExtras } from "@/lib/onboarding";
 import type { User } from "@/types";
 
 // GET — the caller's own profile, prefilled for the onboarding form
@@ -23,7 +24,7 @@ export async function PUT(req: Request) {
   if (!user) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
 
   const body = await req.json();
-  const { name, email, phone, address, age, gender, tshirtSize } = body;
+  const { name, email, phone } = body;
 
   const cleanName = typeof name === "string" ? name.trim() : "";
   const cleanEmail = typeof email === "string" ? email.toLowerCase().trim() : "";
@@ -34,8 +35,14 @@ export async function PUT(req: Request) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
     return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
   }
+  const normalizedPhoneDigits = cleanPhone.replace(/\D/g, "").slice(-10);
   if (!/^\+?\d{10,15}$/.test(cleanPhone.replace(/[\s-]/g, ""))) {
     return NextResponse.json({ error: "Invalid mobile number" }, { status: 400 });
+  }
+
+  const extras = validateOnboardingExtras(body, normalizedPhoneDigits);
+  if ("error" in extras) {
+    return NextResponse.json({ error: extras.error }, { status: 400 });
   }
 
   // Email must stay unique across accounts (excluding self)
@@ -51,22 +58,14 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: "This email is already in use by another account" }, { status: 409 });
   }
 
-  const ageNum = age !== undefined && age !== null && age !== "" ? Number(age) : undefined;
-  if (ageNum !== undefined && (!Number.isFinite(ageNum) || ageNum < 10 || ageNum > 100)) {
-    return NextResponse.json({ error: "Invalid age" }, { status: 400 });
-  }
-
   const fields: Record<string, unknown> = {
     name: cleanName,
     email: cleanEmail,
     phone: cleanPhone,
     profileComplete: true,
     onboardedAt: new Date().toISOString(),
+    ...extras.fields,
   };
-  if (address) fields.address = String(address).trim();
-  if (gender) fields.gender = String(gender).trim();
-  if (tshirtSize) fields.tshirtSize = String(tshirtSize).trim();
-  if (ageNum !== undefined) fields.age = ageNum;
 
   const parts: string[] = [];
   const names: Record<string, string> = {};
