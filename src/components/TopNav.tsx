@@ -1,4 +1,5 @@
 "use client";
+import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LogOut,
@@ -32,6 +33,16 @@ export function TopNav({ userName, role }: TopNavProps) {
   const [showCohortMenu, setShowCohortMenu] = useState(false);
 
   const isManager = role === "eduskill_manager" || role === "eduskill_admin" || role === "eduskill_viewer";
+
+  const cohortsQ = useQuery<{ cohorts: string[] }>({
+    queryKey: ["topnav-cohorts"],
+    queryFn: () => fetch("/api/cohorts").then(r => r.json()),
+    enabled: isManager,
+    staleTime: 30_000,
+  });
+  const cohortOptions = cohortsQ.data?.cohorts?.length
+    ? cohortsQ.data.cohorts
+    : ["March EduSkill", "June EduSkill"];
 
   useEffect(() => {
     if (isManager) {
@@ -92,7 +103,7 @@ export function TopNav({ userName, role }: TopNavProps) {
               </button>
               {showCohortMenu && (
                 <div className="absolute top-full mt-1 left-0 z-50 rounded-lg border border-border bg-bg-elev shadow-lg py-1 min-w-[140px]">
-                  {["March EduSkill", "June EduSkill"].map(c => (
+                  {cohortOptions.map(c => (
                     <button key={c} onClick={() => selectCohort(c)}
                       className={cn("block w-full text-left px-3 py-1.5 text-xs transition-colors",
                         cohort === c ? "text-fg font-medium bg-bg-elev/80" : "text-fg-muted hover:text-fg hover:bg-bg-elev/60")}>
