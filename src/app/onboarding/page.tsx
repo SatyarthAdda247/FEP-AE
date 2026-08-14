@@ -173,6 +173,7 @@ function ClaimAccountOnboarding() {
         setSubmitting(false);
         return;
       }
+      try { localStorage.setItem("eduskill_welcome_pending", "1"); } catch {}
       router.push("/faculty");
       router.refresh();
     } catch {
@@ -323,6 +324,7 @@ function AuthenticatedOnboarding() {
         setSubmitting(false);
         return;
       }
+      try { localStorage.setItem("eduskill_welcome_pending", "1"); } catch {}
       router.push("/faculty");
       router.refresh();
     } catch {

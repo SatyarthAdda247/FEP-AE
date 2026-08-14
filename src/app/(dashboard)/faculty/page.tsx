@@ -8,9 +8,21 @@ import { SubjectTabs } from "@/components/SubjectTabs";
 import { VideoCard } from "@/components/VideoCard";
 import { VideoDrawer } from "@/components/VideoDrawer";
 import { VideoUploader } from "@/components/VideoUploader";
+import { WelcomeGuide, type TourStep } from "@/components/WelcomeGuide";
 import type { Subject, Video, GradiAnalysis, JWTPayload } from "@/types";
 import { useSearchParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+
+// Batch kickoff — shown in the post-onboarding welcome popup
+const BATCH_STARTS_LABEL = "18 August 2026";
+
+const TOUR_STEPS: TourStep[] = [
+  { selector: '[data-tour="nav"]', title: "Find your way around", body: "Jump between your Dashboard, the Leaderboard, the Scoreboard, and the Archive from here anytime." },
+  { selector: '[data-tour="upload"]', title: "Upload your teaching videos", body: "Paste a YouTube link here to submit a session. Aim for at least 3 videos over 5 minutes each week." },
+  { selector: '[data-tour="stats"]', title: "Track your performance", body: "Your net score, views, likes, and manager ratings all update here as your videos get reviewed." },
+  { selector: '[data-tour="edit-profile"]', title: "Keep your profile updated", body: "Change your photo, subjects, and personal details whenever you need to." },
+  { selector: '[data-tour="videos"]', title: "Your uploads live here", body: "Open any video to see detailed AI and manager feedback on your teaching." },
+];
 
 interface FacultyStats {
   facultyId: string;
@@ -81,6 +93,7 @@ function FacultyDashboardContent() {
 
   const [showTrackerModal, setShowTrackerModal] = useState(false);
   const [hasCheckedTracker, setHasCheckedTracker] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   const meQ = useQuery({
     queryKey: ["me"],
@@ -113,8 +126,20 @@ function FacultyDashboardContent() {
     }
   }, [user, facultyId, router]);
 
+  // First visit right after onboarding → show the welcome popup + tour once,
+  // and suppress the weekly-tracker modal for this load (new users have 0 videos).
   useEffect(() => {
-    if (stats && !hasCheckedTracker && isOwnProfile) {
+    if (!isOwnProfile) return;
+    try {
+      if (localStorage.getItem("eduskill_welcome_pending")) {
+        setShowWelcome(true);
+        setHasCheckedTracker(true);
+      }
+    } catch {}
+  }, [isOwnProfile]);
+
+  useEffect(() => {
+    if (stats && !hasCheckedTracker && isOwnProfile && !showWelcome) {
       const { monday, sunday } = getWeekRange();
       const weeklyVideos = (stats.videos ?? []).filter(v => {
         const d = new Date(v.uploadedAt);
@@ -216,6 +241,7 @@ function FacultyDashboardContent() {
         {isOwnProfile && (
           <div className="flex items-center gap-3">
             <button
+              data-tour="edit-profile"
               onClick={() => setIsEditingProfile(p => !p)}
               className={cn(
                 "flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-medium transition-colors cursor-pointer",
@@ -226,16 +252,18 @@ function FacultyDashboardContent() {
             >
               ⚙️ {isEditingProfile ? "Done Editing" : "Edit Profile"}
             </button>
-            <VideoUploader
-              subjects={subjects}
-              onSuccess={() => statsQ.refetch()}
-            />
+            <span data-tour="upload">
+              <VideoUploader
+                subjects={subjects}
+                onSuccess={() => statsQ.refetch()}
+              />
+            </span>
           </div>
         )}
       </motion.div>
 
       {user && (
-        <HeroStats
+        <div data-tour="stats"><HeroStats
           name={stats?.facultyName || user.name}
           netScore={stats?.netScore ?? 0}
           totalVideos={stats?.totalVideos ?? 0}
@@ -250,7 +278,7 @@ function FacultyDashboardContent() {
           teachingSubject={(stats as any)?.teachingSubject}
           verticals={stats?.subjects}
           hideSubscribers={stats?.cohort === "March EduSkill"}
-        />
+        /></div>
       )}
 
       <AnimatePresence>
@@ -387,7 +415,7 @@ function FacultyDashboardContent() {
       </AnimatePresence>
 
 
-      <div className="mt-8">
+      <div className="mt-8" data-tour="videos">
         <div className="mb-5 flex items-center justify-between border-b border-border pb-2">
           <SubjectTabs
             subjects={subjectTabs}
@@ -528,6 +556,18 @@ function FacultyDashboardContent() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* First-run welcome popup + navigation tour (post-onboarding) */}
+      {showWelcome && (
+        <WelcomeGuide
+          steps={TOUR_STEPS}
+          batchStartsLabel={BATCH_STARTS_LABEL}
+          onFinish={() => {
+            setShowWelcome(false);
+            try { localStorage.removeItem("eduskill_welcome_pending"); } catch {}
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -115,7 +115,7 @@ export function TopNav({ userName, role }: TopNavProps) {
             </div>
           )}
 
-          <nav className="flex items-center gap-1 ml-2">
+          <nav data-tour="nav" className="flex items-center gap-1 ml-2">
             {navItems.map((item) => {
               const active =
                 pathname === item.href ||
