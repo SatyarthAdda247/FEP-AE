@@ -1,19 +1,20 @@
 /**
  * EduSkill — Orders → August cohort auto-sync (Google Apps Script)
  * ===========================================================================
- * Paste this into the Campus Program sheet: Extensions → Apps Script.
- * Then do TWO things:
- *   1. Fill in the two CONFIG values just below.
- *   2. Run `installTriggers` once (authorize when asked).
- * That's it — from then on, anyone in Raw-Orders who paid above the threshold
- * is enrolled into the August cohort automatically whenever the sheet changes.
+ * Reads the Raw-Orders tab and enrolls everyone who paid above the threshold
+ * into the August cohort — automatically, whenever the sheet changes.
  *
- * (Optional) Run `syncNow` once for an immediate first sync and check
- * View → Logs for the result.
+ * PASTE into: the sheet → Extensions → Apps Script. Then:
+ *   1. Fill in the two CONFIG values below.
+ *   2. Run `installTriggers` once (authorize when asked)  → enables auto-sync.
+ *   3. (If you use the /exec Web App URL) Deploy → Manage deployments →
+ *      edit (✎) → Deploy, so the URL picks up doGet below. Trigger a manual
+ *      sync anytime by visiting:  <WebApp /exec URL>?token=<SYNC_SECRET>
  * ===========================================================================
  */
 
 // ── CONFIG — fill these two in ──────────────────────────────────────────────
+// The DASHBOARD's webhook (NOT this script's /exec URL):
 var WEBHOOK_URL = 'https://YOUR-DASHBOARD-DOMAIN/api/cohorts/sync-orders'; // e.g. https://eduskill.adda247.com/api/cohorts/sync-orders
 var SYNC_SECRET = 'PASTE-THE-SAME-SECRET-AS-THE-DASHBOARD';                // must equal ORDERS_SYNC_SECRET in the dashboard env
 // ────────────────────────────────────────────────────────────────────────────
@@ -49,13 +50,13 @@ function readOrderRows_() {
   return rows;
 }
 
-/** Push all current Raw-Orders rows to the dashboard webhook. */
+/** Read Raw-Orders and push all rows to the dashboard webhook. Returns the parsed response. */
 function syncNow() {
   if (WEBHOOK_URL.indexOf('YOUR-DASHBOARD-DOMAIN') !== -1 || SYNC_SECRET.indexOf('PASTE-') === 0) {
     throw new Error('Fill in WEBHOOK_URL and SYNC_SECRET at the top of the script first.');
   }
   var rows = readOrderRows_();
-  if (!rows.length) { Logger.log('No rows to sync.'); return; }
+  if (!rows.length) { Logger.log('No rows to sync.'); return { received: 0 }; }
 
   var res = UrlFetchApp.fetch(WEBHOOK_URL, {
     method: 'post',
@@ -67,12 +68,26 @@ function syncNow() {
   var code = res.getResponseCode();
   Logger.log('Sync ' + code + ': ' + res.getContentText());
   if (code < 200 || code >= 300) throw new Error('Webhook returned ' + code + ': ' + res.getContentText());
+  return JSON.parse(res.getContentText());
+}
+
+/** Web App entrypoints — visiting <exec URL>?token=<SYNC_SECRET> runs a sync. */
+function doGet(e)  { return _handleWebApp_(e); }
+function doPost(e) { return _handleWebApp_(e); }
+function _handleWebApp_(e) {
+  var json = function (obj) {
+    return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+  };
+  var token = e && e.parameter ? e.parameter.token : '';
+  if (token !== SYNC_SECRET) return json({ ok: false, error: 'unauthorized' });
+  try { return json({ ok: true, result: syncNow() }); }
+  catch (err) { return json({ ok: false, error: String(err) }); }
 }
 
 /** onChange trigger handler. */
 function onChangeTrigger() { syncNow(); }
 
-/** Run ONCE to install triggers. Safe to re-run (clears old ones first). */
+/** Run ONCE to enable auto-sync. Safe to re-run (clears old triggers first). */
 function installTriggers() {
   var existing = ScriptApp.getProjectTriggers();
   for (var i = 0; i < existing.length; i++) ScriptApp.deleteTrigger(existing[i]);
