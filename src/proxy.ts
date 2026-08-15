@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 import { getJwtSecretKey, normalizeRole } from "@/lib/jwt";
 
-const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/google", "/api/auth/me", "/api/auth/signup", "/join", "/api/join", "/onboarding", "/api/onboarding/claim"];
+const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/google", "/api/auth/me", "/api/auth/signup", "/join", "/api/join", "/onboarding", "/api/onboarding/claim", "/api/cohorts/sync-orders"];
 
 export default async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
