@@ -29,14 +29,13 @@ the ₹1500 threshold, and skips anyone who already has an account.
 **2. Google Sheet side**
 - Open the sheet → **Extensions → Apps Script**.
 - Paste in [`sync-orders.gs`](./sync-orders.gs).
-- **Project Settings (⚙) → Script Properties**, add:
+- Fill in the two CONFIG values at the top of the script:
   - `WEBHOOK_URL` = `https://<your-dashboard-domain>/api/cohorts/sync-orders`
-  - `ORDERS_SYNC_SECRET` = *(the exact same value as the dashboard)*
-- Run **`installTriggers`** once and authorize. This wires:
-  - an **onChange** trigger — syncs seconds after any edit/import, and
-  - an **hourly** trigger — safety net for missed events / bulk imports.
-- (Optional) Run **`syncNow`** once for an immediate first sync; check the
-  execution log for the `{ received, qualifying, created }` response.
+  - `SYNC_SECRET` = *(the exact same value as the dashboard's `ORDERS_SYNC_SECRET`)*
+- Run **`installTriggers`** once and authorize. This wires an **onChange**
+  trigger (syncs seconds after any edit/import) + an **hourly** safety-net
+  trigger, and does one initial sync immediately. Check **View → Logs** for
+  the `{ received, qualifying, created }` result.
 
 ## Tuning
 
