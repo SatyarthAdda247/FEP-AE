@@ -225,12 +225,12 @@ export default function LoginPage() {
         />
       </div>
 
-      {/* Left Column: Brand & Info */}
-      <motion.div 
+      {/* Left Column: Brand & Info — desktop only (hidden on mobile to keep it clean) */}
+      <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="show"
-        className="relative flex flex-col justify-between p-8 md:p-16 overflow-hidden border-r border-border bg-bg/85 backdrop-blur-md z-10"
+        className="relative hidden md:flex flex-col justify-between p-8 md:p-16 overflow-hidden border-r border-border bg-bg/85 backdrop-blur-md z-10"
         style={{
           backgroundImage: `
             linear-gradient(var(--border) 1px, transparent 1px),
@@ -338,25 +338,29 @@ export default function LoginPage() {
       </motion.div>
 
       {/* Right Column: Sign-in Form */}
-      <div className="flex flex-col justify-center items-center p-8 md:p-16 bg-bg-elev z-10 relative">
-        <motion.div 
+      <div className="flex min-h-screen flex-col justify-center items-center px-5 py-10 md:p-16 bg-bg-elev z-10 relative">
+        <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6, delay: 0.3 }}
           className="w-full max-w-[400px]"
         >
-          {/* Custom logo representing 'E' inside a shield in elegant shades of gray */}
-          <div className="flex justify-center mb-8">
-            <motion.div 
+          {/* Brand mark */}
+          <div className="flex justify-center mb-6 md:mb-8">
+            <motion.div
               whileHover={{ scale: 1.05 }}
               transition={{ type: "spring", stiffness: 300 }}
               className="relative cursor-pointer"
             >
-              <CustomGrayLogo className="w-24 h-24 filter drop-shadow-[0_4px_24px_rgba(0,0,0,0.15)]" />
+              <CustomGrayLogo className="w-16 h-16 md:w-24 md:h-24 filter drop-shadow-[0_4px_24px_rgba(0,0,0,0.15)]" />
             </motion.div>
           </div>
 
-          <div className="text-center mb-8">
+          <div className="text-center mb-6 md:mb-8">
+            <div className="md:hidden inline-flex items-center gap-1.5 rounded-full border border-emerald/20 bg-emerald/5 px-3 py-1 text-[10px] font-medium text-emerald mb-3">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald" />
+              EduSkill Program
+            </div>
             <h2 className="text-2xl font-bold tracking-tight text-fg">Sign in</h2>
             <p className="mt-2 text-sm text-fg-muted">Use your company Google account to continue.</p>
           </div>
