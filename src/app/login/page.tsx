@@ -2,7 +2,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
-import { Loader2, ShieldCheck, Sparkles, Video, Users, Mail, Lock, ArrowRight, ClipboardCheck } from "lucide-react";
+import { Loader2, ShieldCheck, Sparkles, Video, Users, Mail, Lock, ArrowRight } from "lucide-react";
 
 declare global {
   interface Window {
@@ -44,7 +44,6 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [scriptReady, setScriptReady] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("dark");
-  const [emailLoginOpen, setEmailLoginOpen] = useState(false);
   const [emailOrPhone, setEmailOrPhone] = useState("");
   const [password, setPassword] = useState("");
   const [emailLoading, setEmailLoading] = useState(false);
@@ -362,7 +361,7 @@ export default function LoginPage() {
               EduSkill Program
             </div>
             <h2 className="text-2xl font-bold tracking-tight text-fg">Sign in</h2>
-            <p className="mt-2 text-sm text-fg-muted">Use your company Google account to continue.</p>
+            <p className="mt-2 text-sm text-fg-muted">Use your mobile number &amp; password, or your company Google account.</p>
           </div>
 
           {/* Error display */}
@@ -379,12 +378,72 @@ export default function LoginPage() {
             )}
           </AnimatePresence>
 
+          {/* Primary: mobile/email + password sign-in */}
+          <form onSubmit={handleEmailLogin} className="space-y-3">
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-fg-muted" />
+              <input
+                value={emailOrPhone}
+                onChange={(e) => setEmailOrPhone(e.target.value)}
+                placeholder="Mobile number or email"
+                autoComplete="username"
+                required
+                className="w-full rounded-xl border border-border bg-bg-card pl-9 pr-3 py-3 text-sm text-fg outline-none focus:border-fg/30"
+              />
+            </div>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-fg-muted" />
+              <input
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                type="password"
+                placeholder="Password"
+                autoComplete="current-password"
+                required
+                className="w-full rounded-xl border border-border bg-bg-card pl-9 pr-3 py-3 text-sm text-fg outline-none focus:border-fg/30"
+              />
+            </div>
+            {emailError && <p className="text-xs text-rose-400">{emailError}</p>}
+            <button
+              type="submit"
+              disabled={emailLoading}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-fg px-4 py-3 text-sm font-semibold text-bg hover:bg-fg/90 transition-colors disabled:opacity-40"
+            >
+              {emailLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+              Sign in
+            </button>
+            <div className="flex items-center justify-between text-[11px]">
+              <a href="/forgot-password" className="text-fg-muted hover:text-fg transition-colors">Forgot password?</a>
+              <a
+                href="/onboarding"
+                onClick={(e) => {
+                  e.preventDefault();
+                  const width = 540, height = 750;
+                  const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - width) / 2));
+                  const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - height) / 2));
+                  const popup = window.open("/onboarding", "EduSkillOnboarding", `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`);
+                  if (popup) popup.focus();
+                }}
+                className="text-fg-muted hover:text-fg transition-colors cursor-pointer"
+              >
+                New here? Set up account
+              </a>
+            </div>
+          </form>
+
+          {/* Divider */}
+          <div className="my-5 flex items-center gap-3">
+            <span className="h-px flex-1 bg-border" />
+            <span className="text-[10px] uppercase tracking-wider text-fg-dim">or continue with</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+
           {/* Google Sign-in Card Area */}
-          <motion.div 
+          <motion.div
             whileHover={{ boxShadow: "0 20px 40px -15px var(--glass-shadow)" }}
-            className="bg-bg-card rounded-2xl p-6 border border-border shadow-2xl relative overflow-hidden transition-shadow duration-300"
+            className="bg-bg-card rounded-2xl p-4 border border-border shadow-2xl relative overflow-hidden transition-shadow duration-300"
           >
-            <div className="flex flex-col items-center justify-center min-h-[60px] py-2">
+            <div className="flex flex-col items-center justify-center min-h-[52px] py-1">
               {loading ? (
                 <div className="flex flex-col items-center gap-3">
                   <Loader2 className="h-6 w-6 animate-spin text-fg-muted" />
@@ -403,94 +462,6 @@ export default function LoginPage() {
               )}
             </div>
           </motion.div>
-
-          {/* New-user onboarding CTA + returning-user password toggle */}
-          <div className="mt-6 space-y-3">
-            <div className="flex items-center gap-3">
-              <span className="h-px flex-1 bg-border" />
-              <span className="text-[10px] uppercase tracking-wider text-fg-dim">or</span>
-              <span className="h-px flex-1 bg-border" />
-            </div>
-
-            <a
-              href="/onboarding"
-              onClick={(e) => {
-                e.preventDefault();
-                const width = 540;
-                const height = 750;
-                const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - width) / 2));
-                const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - height) / 2));
-                const popup = window.open(
-                  "/onboarding",
-                  "EduSkillOnboarding",
-                  `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
-                );
-                if (popup) popup.focus();
-              }}
-              className="w-full flex items-center justify-center gap-2 rounded-xl border border-border bg-bg-card px-4 py-2.5 text-sm font-medium text-fg hover:border-fg/30 transition-colors cursor-pointer"
-            >
-              <ClipboardCheck className="h-4 w-4" />
-              New here? Set up your account
-            </a>
-
-            {!emailLoginOpen ? (
-              <button
-                onClick={() => setEmailLoginOpen(true)}
-                className="w-full text-center text-[11px] text-fg-dim hover:text-fg-muted transition-colors"
-              >
-                Already set up your account? Sign in with email &amp; password
-              </button>
-            ) : (
-              <motion.form
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                onSubmit={handleEmailLogin}
-                className="space-y-3"
-              >
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-fg-muted" />
-                  <input
-                    value={emailOrPhone}
-                    onChange={(e) => setEmailOrPhone(e.target.value)}
-                    placeholder="Email or 10-digit mobile number"
-                    autoComplete="username"
-                    required
-                    className="w-full rounded-xl border border-border bg-bg-card pl-9 pr-3 py-2.5 text-sm text-fg outline-none focus:border-fg/30"
-                  />
-                </div>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-fg-muted" />
-                  <input
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    type="password"
-                    placeholder="Password"
-                    autoComplete="current-password"
-                    required
-                    className="w-full rounded-xl border border-border bg-bg-card pl-9 pr-3 py-2.5 text-sm text-fg outline-none focus:border-fg/30"
-                  />
-                </div>
-                {emailError && (
-                  <p className="text-xs text-rose-400">{emailError}</p>
-                )}
-                <button
-                  type="submit"
-                  disabled={emailLoading}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-fg px-4 py-2.5 text-sm font-medium text-bg hover:bg-fg/90 transition-colors disabled:opacity-40"
-                >
-                  {emailLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-                  Sign in
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setEmailLoginOpen(false); setEmailError(""); }}
-                  className="w-full text-center text-[11px] text-fg-dim hover:text-fg-muted transition-colors"
-                >
-                  Use Google sign-in instead
-                </button>
-              </motion.form>
-            )}
-          </div>
 
           {/* Security / Info Note */}
           <motion.div 

@@ -1,6 +1,6 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trophy, Loader2, Play, ExternalLink } from "lucide-react";
 import { cn, youtubeThumb } from "@/lib/utils";
@@ -65,6 +65,19 @@ function ColorAvatar({ name }: { name: string }) {
 
 export default function LeaderboardPage() {
   const [selectedCohort, setSelectedCohort] = useState<"August EduSkill" | "June EduSkill" | "March EduSkill">("August EduSkill");
+
+  // Open on whichever cohort is active in the top nav, and follow changes to it
+  useEffect(() => {
+    const apply = (c: string) => {
+      if (c === "August EduSkill" || c === "June EduSkill" || c === "March EduSkill") setSelectedCohort(c);
+    };
+    let saved = localStorage.getItem("selectedCohort") || "August EduSkill";
+    if (saved.includes("FEP")) saved = saved.replace("FEP", "EduSkill");
+    apply(saved);
+    const onChange = (e: Event) => apply((e as CustomEvent).detail);
+    window.addEventListener("cohort-change", onChange);
+    return () => window.removeEventListener("cohort-change", onChange);
+  }, []);
   const [selectedTab, setSelectedTab] = useState<string>("leaderboard");
   const [viewMode, setViewMode] = useState<"summary" | "full">("summary");
   const [openVideoId, setOpenVideoId] = useState<string | null>(null);

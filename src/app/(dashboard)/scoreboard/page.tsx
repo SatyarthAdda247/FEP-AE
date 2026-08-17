@@ -1,6 +1,6 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutList, Loader2, Search,
@@ -34,6 +34,21 @@ const JUNE_WEEKS = [
   { label: "Week 3", range: "22 Jun · 28 Jun", start: new Date("2026-06-22T00:00:00Z"), end: new Date("2026-06-28T23:59:59Z") },
   { label: "Week 4", range: "29 Jun · 08 Jul", start: new Date("2026-06-29T00:00:00Z"), end: new Date("2026-07-08T23:59:59Z") },
 ];
+
+const AUGUST_WEEKS = [
+  { label: "Week 1", range: "Aug 18–24", start: new Date("2026-08-18T00:00:00Z"), end: new Date("2026-08-24T23:59:59Z") },
+  { label: "Week 2", range: "Aug 25–31", start: new Date("2026-08-25T00:00:00Z"), end: new Date("2026-08-31T23:59:59Z") },
+  { label: "Week 3", range: "Sep 1–7",   start: new Date("2026-09-01T00:00:00Z"), end: new Date("2026-09-07T23:59:59Z") },
+  { label: "Week 4", range: "Sep 8–14",  start: new Date("2026-09-08T00:00:00Z"), end: new Date("2026-09-14T23:59:59Z") },
+];
+
+// August counts top-3 videos every week; June's Week 1 counted only the top 1.
+function weeksForCohort(cohort: string) {
+  return cohort === "June EduSkill" ? JUNE_WEEKS : AUGUST_WEEKS;
+}
+function week1LimitForCohort(cohort: string) {
+  return cohort === "June EduSkill" ? 1 : 3;
+}
 
 
 const AVATAR_COLORS = ["#6366f1","#8b5cf6","#ec4899","#14b8a6","#f97316","#3b82f6","#10b981","#f59e0b","#ef4444","#84cc16"];
@@ -72,23 +87,37 @@ export default function ScoreboardPage() {
     return null;
   };
 
-  const juneQ = useQuery<{ leaderboard: FacultyLeaderRow[]; videos?: any[] }>({
-    queryKey: ["leaderboard-june"],
-    queryFn: () => fetch("/api/stats?scope=all&cohort=June+EduSkill").then(r => r.json()),
+  // Follow the cohort chosen in the top nav (shared via localStorage + event)
+  const [activeCohort, setActiveCohort] = useState<string>("August EduSkill");
+  useEffect(() => {
+    let saved = localStorage.getItem("selectedCohort") || "August EduSkill";
+    if (saved.includes("FEP")) saved = saved.replace("FEP", "EduSkill");
+    setActiveCohort(saved);
+    const onChange = (e: Event) => setActiveCohort((e as CustomEvent).detail);
+    window.addEventListener("cohort-change", onChange);
+    return () => window.removeEventListener("cohort-change", onChange);
+  }, []);
+
+  const weeks = weeksForCohort(activeCohort);
+  const wk1Limit = week1LimitForCohort(activeCohort);
+
+  const cohortQ = useQuery<{ leaderboard: FacultyLeaderRow[]; videos?: any[] }>({
+    queryKey: ["scoreboard", activeCohort],
+    queryFn: () => fetch(`/api/stats?scope=all&cohort=${encodeURIComponent(activeCohort)}`).then(r => r.json()),
     staleTime: 60_000,
   });
 
-  const loading = juneQ.isLoading || meQ.isLoading;
+  const loading = cohortQ.isLoading || meQ.isLoading;
 
 
 
   // ── Resolve Date Range filter ──
   const filterRange = useMemo(() => {
     if (timeFilter === "all") return null;
-    if (timeFilter === "wk1") return JUNE_WEEKS[0];
-    if (timeFilter === "wk2") return JUNE_WEEKS[1];
-    if (timeFilter === "wk3") return JUNE_WEEKS[2];
-    if (timeFilter === "wk4") return JUNE_WEEKS[3];
+    if (timeFilter === "wk1") return weeks[0];
+    if (timeFilter === "wk2") return weeks[1];
+    if (timeFilter === "wk3") return weeks[2];
+    if (timeFilter === "wk4") return weeks[3];
     if (timeFilter === "custom") {
       return {
         start: customStart ? new Date(customStart + "T00:00:00Z") : null,
@@ -96,32 +125,32 @@ export default function ScoreboardPage() {
       };
     }
     return null;
-  }, [timeFilter, customStart, customEnd]);
+  }, [timeFilter, customStart, customEnd, weeks]);
 
   // ── Build rows with filters ──
   const allRows = useMemo<ScoreRow[]>(() => {
-    const list = juneQ.data?.leaderboard ?? [];
-    const videos = juneQ.data?.videos ?? [];
+    const list = cohortQ.data?.leaderboard ?? [];
+    const videos = cohortQ.data?.videos ?? [];
 
-    const raw = list.map(f => {
+    const raw = list.map((f: FacultyLeaderRow) => {
       const own = videos.filter((v: any) =>
         v.facultyId === f.userId && v.managerScore != null
       );
-      
+
       const weekScore = (s: Date, e: Date, limit: number) => {
         const vs = own.filter((v: any) => {
           const d = v.uploadedAt ? new Date(v.uploadedAt) : null;
           return d && d >= s && d <= e;
         });
-        const scores = vs.map((v: any) => v.managerScore).filter((v): v is number => v != null);
-        scores.sort((a, b) => b - a);
-        return scores.length ? scores.slice(0, limit).reduce((acc: number, v: any) => acc + v, 0) : null;
+        const scores = vs.map((v: any) => v.managerScore).filter((v: any): v is number => v != null);
+        scores.sort((a: number, b: number) => b - a);
+        return scores.length ? scores.slice(0, limit).reduce((acc: number, v: number) => acc + v, 0) : null;
       };
 
-      const wk1 = weekScore(JUNE_WEEKS[0].start, JUNE_WEEKS[0].end, 1);
-      const wk2 = weekScore(JUNE_WEEKS[1].start, JUNE_WEEKS[1].end, 3);
-      const wk3 = weekScore(JUNE_WEEKS[2].start, JUNE_WEEKS[2].end, 3);
-      const wk4 = weekScore(JUNE_WEEKS[3].start, JUNE_WEEKS[3].end, 3);
+      const wk1 = weekScore(weeks[0].start, weeks[0].end, wk1Limit);
+      const wk2 = weekScore(weeks[1].start, weeks[1].end, 3);
+      const wk3 = weekScore(weeks[2].start, weeks[2].end, 3);
+      const wk4 = weekScore(weeks[3].start, weeks[3].end, 3);
       const scores = [wk1, wk2, wk3, wk4].filter((v): v is number => v != null);
       const total = scores.length ? scores.reduce((a, b) => a + b, 0) : null;
 
@@ -132,7 +161,7 @@ export default function ScoreboardPage() {
       } else {
         let sum = 0;
         let hasScoredWeek = false;
-        JUNE_WEEKS.forEach((wk, wi) => {
+        weeks.forEach((wk, wi) => {
           const wkMatchingVids = own.filter((v: any) => {
             const d = v.uploadedAt ? new Date(v.uploadedAt) : null;
             if (!d) return false;
@@ -144,10 +173,10 @@ export default function ScoreboardPage() {
 
           if (wkMatchingVids.length > 0) {
             hasScoredWeek = true;
-            const wkScores = wkMatchingVids.map((v: any) => v.managerScore).filter((s): s is number => s != null);
-            wkScores.sort((a, b) => b - a);
-            const limit = wi === 0 ? 1 : 3;
-            sum += wkScores.slice(0, limit).reduce((acc, s) => acc + s, 0);
+            const wkScores = wkMatchingVids.map((v: any) => v.managerScore).filter((s: any): s is number => s != null);
+            wkScores.sort((a: number, b: number) => b - a);
+            const limit = wi === 0 ? wk1Limit : 3;
+            sum += wkScores.slice(0, limit).reduce((acc: number, s: number) => acc + s, 0);
           }
         });
         filteredScore = hasScoredWeek ? sum : null;
@@ -167,16 +196,16 @@ export default function ScoreboardPage() {
     });
 
     // Sort by filtered total according to sort option selected
-    raw.sort((a, b) => {
+    raw.sort((a: ScoreRow, b: ScoreRow) => {
       const scoreA = a.filteredScore ?? -Infinity;
       const scoreB = b.filteredScore ?? -Infinity;
       return sortOption === "highest" ? scoreB - scoreA : scoreA - scoreB;
     });
 
-    return raw.map((r, i) => ({ ...r, rank: i + 1 }));
-  }, [juneQ.data, filterRange, sortOption]);
+    return raw.map((r: ScoreRow, i: number) => ({ ...r, rank: i + 1 }));
+  }, [cohortQ.data, filterRange, sortOption, weeks, wk1Limit]);
 
-  const weekLabels = JUNE_WEEKS;
+  const weekLabels = weeks;
 
   // ── Filter by search query ──
   const filteredRows = useMemo(() => {
@@ -223,10 +252,9 @@ export default function ScoreboardPage() {
               className="rounded-full border border-border bg-bg-elev/60 px-3.5 py-1.5 text-xs text-fg outline-none focus:border-violet-500/40 cursor-pointer font-medium"
             >
               <option value="all">All Time</option>
-              <option value="wk1">Week 1 (08 Jun - 14 Jun)</option>
-              <option value="wk2">Week 2 (15 Jun - 21 Jun)</option>
-              <option value="wk3">Week 3 (22 Jun - 28 Jun)</option>
-              <option value="wk4">Week 4 (29 Jun - 08 Jul)</option>
+              {weeks.map((wk, i) => (
+                <option key={i} value={`wk${i + 1}`}>{`Week ${i + 1} (${wk.range})`}</option>
+              ))}
               <option value="custom">Custom Date Range</option>
             </select>
           </div>

@@ -20,6 +20,7 @@ export const TABLES = {
   USERS: "fep-users",
   COHORTS: "fep-cohorts",
   SELECTED: "fep-selected-candidates",
+  OTPS: "fep-otps",
   VIDEOS: "fep-videos",
   ANALYSES: "fep-gradi-analyses",
   RATINGS: "fep-manager-ratings",

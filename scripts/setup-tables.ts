@@ -60,6 +60,15 @@ const tables = [
     BillingMode: "PAY_PER_REQUEST" as const,
   },
   {
+    // Phone OTP codes for verification / password reset (auto-expired via TTL on `ttl`)
+    TableName: "fep-otps",
+    KeySchema: [{ AttributeName: "otpKey", KeyType: "HASH" as const }],
+    AttributeDefinitions: [
+      { AttributeName: "otpKey", AttributeType: "S" as const },
+    ],
+    BillingMode: "PAY_PER_REQUEST" as const,
+  },
+  {
     TableName: "fep-videos",
     KeySchema: [
       { AttributeName: "facultyId", KeyType: "HASH" as const },
