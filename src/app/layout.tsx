@@ -37,7 +37,7 @@ export default async function RootLayout({
   const store = await cookies();
   const cookieTheme = store.get("eduskill_theme")?.value;
   const theme: "light" | "dark" =
-    cookieTheme === "light" || cookieTheme === "dark" ? cookieTheme : "dark";
+    cookieTheme === "light" || cookieTheme === "dark" ? cookieTheme : "light";
 
   return (
     <html
