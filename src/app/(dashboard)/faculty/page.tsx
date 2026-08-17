@@ -2,7 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo, useEffect, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Inbox, Sparkles, Loader2, Search, Plus, Clock } from "lucide-react";
+import { Inbox, Sparkles, Loader2, Search, Plus, Clock, UserCog, Camera, User, X } from "lucide-react";
 import { HeroStats } from "@/components/HeroStats";
 import { SubjectTabs } from "@/components/SubjectTabs";
 import { VideoCard } from "@/components/VideoCard";
@@ -329,11 +329,12 @@ function FacultyDashboardContent() {
               className={cn(
                 "flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-medium transition-colors cursor-pointer",
                 isEditingProfile
-                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
+                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
                   : "border-border bg-bg-elev/50 text-fg hover:border-border-strong"
               )}
             >
-              ⚙️ {isEditingProfile ? "Done Editing" : "Edit Profile"}
+              <UserCog className="h-3.5 w-3.5 text-emerald-400" />
+              {isEditingProfile ? "Done Editing" : "Manage Profile"}
             </button>
             <span data-tour="upload">
               <VideoUploader
@@ -367,40 +368,40 @@ function FacultyDashboardContent() {
       <AnimatePresence>
         {isEditingProfile && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto">
-            {/* Blurred Backdrop */}
+            {/* Dark Blurred Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsEditingProfile(false)}
-              className="fixed inset-0 bg-black/75 backdrop-blur-md"
+              className="fixed inset-0 bg-black/80 backdrop-blur-md"
             />
 
-            {/* Modal Dialog */}
+            {/* Modal Dialog Box */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 16 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="relative z-10 w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl border border-border bg-bg-card/95 p-5 sm:p-6 md:p-8 shadow-2xl backdrop-blur-xl no-scrollbar"
+              className="relative z-10 w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#0f1118] text-white p-5 sm:p-6 md:p-8 shadow-2xl backdrop-blur-xl no-scrollbar"
             >
               {/* Sticky Header */}
-              <div className="sticky -top-5 sm:-top-6 md:-top-8 z-30 flex items-center justify-between border-b border-border/80 bg-bg-card/95 pb-4 pt-1 backdrop-blur-md -mx-5 sm:-mx-6 md:-mx-8 px-5 sm:px-6 md:px-8 mb-6">
+              <div className="sticky -top-5 sm:-top-6 md:-top-8 z-30 flex items-center justify-between border-b border-white/10 bg-[#0f1118]/95 pb-4 pt-1 backdrop-blur-md -mx-5 sm:-mx-6 md:-mx-8 px-5 sm:px-6 md:px-8 mb-6">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-emerald-400" />
-                  <h2 className="text-base font-semibold tracking-tight text-fg">Manage Profile Details</h2>
+                  <UserCog className="h-4.5 w-4.5 text-emerald-400" />
+                  <h2 className="text-base font-semibold tracking-tight text-white">Manage Profile Details</h2>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setIsEditingProfile(false)}
-                    className="rounded-full border border-border bg-bg-elev/60 px-4 py-1.5 text-xs font-medium text-fg hover:border-border-strong transition-colors cursor-pointer"
+                    className="rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 px-4 py-1.5 text-xs font-medium text-zinc-300 hover:text-white transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleSaveProfile}
                     disabled={savingProfile}
-                    className="rounded-full bg-emerald-600 px-5 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50 transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
+                    className="rounded-xl bg-emerald-600 px-5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50 transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-emerald-950/50"
                   >
                     {savingProfile && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                     Save Details
@@ -413,7 +414,7 @@ function FacultyDashboardContent() {
                 <div className="mb-6 flex items-center gap-2.5 rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-xs text-sky-300">
                   <Clock className="h-4 w-4 shrink-0 text-sky-400" />
                   <div>
-                    <span className="font-semibold">Pending Admin Approval:</span> You have a profile update request waiting for admin review. Submitting new changes will update your pending request.
+                    <span className="font-semibold text-sky-200">Pending Admin Approval:</span> You have a profile update request waiting for admin review. Submitting new changes will update your pending request.
                   </div>
                 </div>
               )}
@@ -426,21 +427,23 @@ function FacultyDashboardContent() {
                   "border-rose-500/30 bg-rose-500/10 text-rose-400"
                 )}>
                   <span>{statusMessage.text}</span>
-                  <button onClick={() => setStatusMessage(null)} className="text-xs hover:opacity-70">✕</button>
+                  <button onClick={() => setStatusMessage(null)} className="p-0.5 hover:opacity-70 text-zinc-400 hover:text-white cursor-pointer">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-[130px_1fr] gap-6 items-start">
                 {/* Single Photo Upload Column */}
                 <div className="flex flex-col items-center gap-3">
-                  <div className="relative h-24 w-24 rounded-full border border-border overflow-hidden bg-bg-elev flex items-center justify-center shadow-inner">
+                  <div className="relative h-28 w-28 rounded-full border-2 border-emerald-500/30 overflow-hidden bg-[#161822] flex items-center justify-center shadow-xl">
                     {editAvatar ? (
                       <img src={editAvatar} alt="Profile preview" className="h-full w-full object-cover" />
                     ) : (
-                      <span className="text-2xl text-fg-dim">📷</span>
+                      <Camera className="h-8 w-8 text-zinc-500" />
                     )}
                   </div>
-                  <label className="cursor-pointer rounded-full border border-border bg-bg-elev px-3 py-1 text-[11px] font-medium text-fg hover:border-border-strong text-center transition-colors">
+                  <label className="cursor-pointer rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:border-emerald-500/50 hover:text-white text-center transition-all">
                     Upload Photo
                     <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
                   </label>
@@ -450,97 +453,97 @@ function FacultyDashboardContent() {
                 <div className="space-y-6">
                   {/* Personal Information */}
                   <div>
-                    <h3 className="text-xs font-semibold text-fg/80 uppercase tracking-wider mb-3">Personal Information</h3>
+                    <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3">Personal Information</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5">
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Full Name</label>
+                      <div className="sm:col-span-2 space-y-1">
+                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Full Name</label>
                         <input
                           type="text"
                           value={editName}
                           onChange={(e) => setEditName(e.target.value)}
-                          className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30"
-                          placeholder="Name"
+                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-zinc-500"
+                          placeholder="Full Name"
                         />
                       </div>
 
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Email Address</label>
+                      <div className="sm:col-span-2 space-y-1">
+                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Email Address</label>
                         <input
                           type="email"
                           value={editEmail}
                           onChange={(e) => setEditEmail(e.target.value)}
-                          className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30"
+                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-zinc-500"
                           placeholder="email@example.com"
                         />
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Primary Mobile</label>
+                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Primary Mobile</label>
                         <input
                           type="tel"
                           value={editPhone}
                           onChange={(e) => setEditPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                          className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30"
+                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-zinc-500"
                           placeholder="10-digit mobile"
                         />
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Backup Mobile</label>
+                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Backup Mobile</label>
                         <input
                           type="tel"
                           value={editBackupPhone}
                           onChange={(e) => setEditBackupPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                          className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30"
+                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-zinc-500"
                           placeholder="Backup mobile (optional)"
                         />
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Age</label>
+                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Age</label>
                         <input
                           type="number"
                           value={editAge}
                           onChange={(e) => setEditAge(e.target.value)}
-                          className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30"
+                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-zinc-500"
                           placeholder="Age"
                         />
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Date of Birth (DOB)</label>
+                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Date of Birth (DOB)</label>
                         <input
                           type="date"
                           value={editDob}
                           onChange={(e) => setEditDob(e.target.value)}
-                          className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30 text-white"
+                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all"
                         />
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Gender</label>
+                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Gender</label>
                         <select
                           value={editGender}
                           onChange={(e) => setEditGender(e.target.value)}
-                          className="w-full rounded-lg border border-border bg-[#181a20] px-3 py-2 text-sm outline-none focus:border-fg/30 text-white"
+                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all cursor-pointer"
                         >
-                          <option value="">Select Gender</option>
-                          <option value="Male">Male</option>
-                          <option value="Female">Female</option>
-                          <option value="Other">Other</option>
+                          <option value="" className="bg-[#161822] text-white">Select Gender</option>
+                          <option value="Male" className="bg-[#161822] text-white">Male</option>
+                          <option value="Female" className="bg-[#161822] text-white">Female</option>
+                          <option value="Other" className="bg-[#161822] text-white">Other</option>
                         </select>
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">T-Shirt Size</label>
+                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">T-Shirt Size</label>
                         <select
                           value={editTshirtSize}
                           onChange={(e) => setEditTshirtSize(e.target.value)}
-                          className="w-full rounded-lg border border-border bg-[#181a20] px-3 py-2 text-sm outline-none focus:border-fg/30 text-white"
+                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all cursor-pointer"
                         >
-                          <option value="">Select T-Shirt Size</option>
+                          <option value="" className="bg-[#161822] text-white">Select T-Shirt Size</option>
                           {["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL"].map((sz) => (
-                            <option key={sz} value={sz}>{sz}</option>
+                            <option key={sz} value={sz} className="bg-[#161822] text-white">{sz}</option>
                           ))}
                         </select>
                       </div>
@@ -548,16 +551,16 @@ function FacultyDashboardContent() {
                   </div>
 
                   {/* Teaching Details */}
-                  <div>
-                    <h3 className="text-xs font-semibold text-fg/80 uppercase tracking-wider mb-3">Teaching Details</h3>
+                  <div className="pt-2 border-t border-white/10">
+                    <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3">Teaching Details</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                       <div className="space-y-1">
-                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Subject (Teaching)</label>
+                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Subject (Teaching)</label>
                         <input
                           type="text"
                           value={editTeachingSubject}
                           onChange={(e) => setEditTeachingSubject(e.target.value)}
-                          className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30"
+                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-zinc-500"
                           placeholder="e.g. Maths, Physics, CS"
                         />
                       </div>
@@ -565,63 +568,63 @@ function FacultyDashboardContent() {
                   </div>
 
                   {/* Address Details */}
-                  <div>
-                    <h3 className="text-xs font-semibold text-fg/80 uppercase tracking-wider mb-3">Address Details</h3>
+                  <div className="pt-2 border-t border-white/10">
+                    <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3">Address Details</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5">
                       <div className="sm:col-span-2 space-y-1">
-                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Address Line 1</label>
+                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Address Line 1</label>
                         <input
                           type="text"
                           value={editAddressLine1}
                           onChange={(e) => setEditAddressLine1(e.target.value)}
-                          className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30"
+                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-zinc-500"
                           placeholder="House/Flat No., Building Name, Street"
                         />
                       </div>
 
                       <div className="sm:col-span-2 space-y-1">
-                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Address Line 2 (Optional)</label>
+                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Address Line 2 (Optional)</label>
                         <input
                           type="text"
                           value={editAddressLine2}
                           onChange={(e) => setEditAddressLine2(e.target.value)}
-                          className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30"
+                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-zinc-500"
                           placeholder="Landmark, Area, Locality"
                         />
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">City</label>
+                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">City</label>
                         <input
                           type="text"
                           value={editCity}
                           onChange={(e) => setEditCity(e.target.value)}
-                          className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30"
+                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-zinc-500"
                           placeholder="City"
                         />
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">State</label>
+                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">State</label>
                         <select
                           value={editState}
                           onChange={(e) => setEditState(e.target.value)}
-                          className="w-full rounded-lg border border-border bg-[#181a20] px-3 py-2 text-sm outline-none focus:border-fg/30 text-white"
+                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all cursor-pointer"
                         >
-                          <option value="">Select State</option>
+                          <option value="" className="bg-[#161822] text-white">Select State</option>
                           {INDIAN_STATES.map((st) => (
-                            <option key={st} value={st}>{st}</option>
+                            <option key={st} value={st} className="bg-[#161822] text-white">{st}</option>
                           ))}
                         </select>
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Pincode</label>
+                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Pincode</label>
                         <input
                           type="text"
                           value={editPincode}
                           onChange={(e) => setEditPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                          className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30"
+                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-zinc-500"
                           placeholder="6-digit pincode"
                         />
                       </div>
@@ -629,31 +632,33 @@ function FacultyDashboardContent() {
                   </div>
 
                   {/* Custom Subjects Selection */}
-                  <div className="pt-3 border-t border-border/50 space-y-3">
+                  <div className="pt-3 border-t border-white/10 space-y-3">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
-                        <label className="text-[11px] font-semibold text-fg-muted uppercase tracking-wider block">Custom Subjects Selection</label>
-                        <p className="text-[11px] text-fg-dim">Search given options or enter custom subjects below.</p>
+                        <label className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider block">Custom Subjects Selection</label>
+                        <p className="text-[11px] text-zinc-400">Search given options or enter custom subjects below.</p>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2">
                         {/* Search bar */}
                         <div className="relative min-w-[180px]">
-                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-fg-muted" />
+                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400" />
                           <input
                             type="text"
                             value={subjectSearch}
                             onChange={(e) => setSubjectSearch(e.target.value)}
                             placeholder="Search subjects..."
-                            className="w-full rounded-lg border border-border bg-bg-elev/60 pl-8 pr-3 py-1.5 text-xs outline-none focus:border-fg/30"
+                            className="w-full rounded-xl border border-white/10 bg-[#161822] pl-8 pr-7 py-2 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-zinc-500"
                           />
                           {subjectSearch && (
-                            <button onClick={() => setSubjectSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-fg-dim hover:text-fg text-xs font-bold cursor-pointer">×</button>
+                            <button onClick={() => setSubjectSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white p-0.5 cursor-pointer">
+                              <X className="h-3.5 w-3.5" />
+                            </button>
                           )}
                         </div>
 
                         {/* Add custom subject */}
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1.5">
                           <input
                             type="text"
                             value={customSubjectInput}
@@ -665,13 +670,13 @@ function FacultyDashboardContent() {
                               }
                             }}
                             placeholder="Enter custom subject..."
-                            className="w-[170px] rounded-lg border border-border bg-bg-elev/60 px-2.5 py-1.5 text-xs outline-none focus:border-fg/30"
+                            className="w-[170px] rounded-xl border border-white/10 bg-[#161822] px-3 py-2 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-zinc-500"
                           />
                           <button
                             type="button"
                             onClick={handleAddCustomSubject}
                             disabled={!customSubjectInput.trim()}
-                            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-40 transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+                            className="rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-40 transition-colors flex items-center gap-1 cursor-pointer shrink-0 shadow-sm"
                           >
                             <Plus className="h-3.5 w-3.5" />
                             Add
@@ -682,20 +687,20 @@ function FacultyDashboardContent() {
 
                     {/* Selected Subjects Badges */}
                     {editSubjects.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 p-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
+                      <div className="flex flex-wrap gap-1.5 p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10">
                         <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400 self-center mr-1">Selected ({editSubjects.length}):</span>
                         {editSubjects.map((subIdOrName) => {
                           const matchingObj = subjects.find(s => s.subjectId === subIdOrName || s.name === subIdOrName);
                           const displayName = matchingObj ? matchingObj.name : subIdOrName;
                           return (
-                            <span key={subIdOrName} className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-300">
+                            <span key={subIdOrName} className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/20 px-3 py-1 text-xs font-medium text-emerald-200 shadow-sm">
                               {displayName}
                               <button
                                 type="button"
                                 onClick={() => setEditSubjects(editSubjects.filter(x => x !== subIdOrName))}
-                                className="hover:text-rose-400 transition-colors text-xs font-bold ml-0.5 cursor-pointer"
+                                className="hover:text-rose-400 transition-colors cursor-pointer text-zinc-300 hover:text-white"
                               >
-                                ×
+                                <X className="h-3 w-3" />
                               </button>
                             </span>
                           );
@@ -704,12 +709,12 @@ function FacultyDashboardContent() {
                     )}
 
                     {/* Subject Options Grid */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 rounded-xl border border-border bg-bg-elev/20 p-3 max-h-[180px] overflow-y-auto no-scrollbar">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 rounded-xl border border-white/10 bg-[#161822]/70 p-3.5 max-h-[180px] overflow-y-auto no-scrollbar">
                       {filteredSubjectsOptions.length > 0 ? (
                         filteredSubjectsOptions.map((s) => {
                           const isChecked = editSubjects.includes(s.subjectId) || editSubjects.includes(s.name);
                           return (
-                            <label key={s.subjectId} className="flex items-center gap-2 text-xs text-fg-muted hover:text-fg cursor-pointer p-1 rounded hover:bg-bg-elev/40">
+                            <label key={s.subjectId} className="flex items-center gap-2 text-xs text-zinc-300 hover:text-white cursor-pointer p-1.5 rounded-lg hover:bg-white/5 transition-colors">
                               <input
                                 type="checkbox"
                                 checked={isChecked}
@@ -720,14 +725,14 @@ function FacultyDashboardContent() {
                                     setEditSubjects([...editSubjects, s.subjectId]);
                                   }
                                 }}
-                                className="rounded border-border text-fg bg-bg-elev"
+                                className="rounded border-white/20 text-emerald-500 bg-[#161822] focus:ring-emerald-500/30"
                               />
                               <span className="truncate">{s.name}</span>
                             </label>
                           );
                         })
                       ) : (
-                        <div className="col-span-full py-4 text-center text-xs text-fg-dim">
+                        <div className="col-span-full py-4 text-center text-xs text-zinc-400">
                           No predefined subjects match "{subjectSearch}". Use the "Enter custom subject" field above to add custom subjects.
                         </div>
                       )}
