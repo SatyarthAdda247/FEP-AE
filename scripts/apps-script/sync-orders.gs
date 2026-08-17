@@ -37,15 +37,24 @@ function readOrderRows_() {
   var iPhone = find(['phone', 'contact', 'mobile', 'phone number']);
   var iName  = find(['name', 'student name', 'full name']);
   var iRev   = find(['revenue', 'amount', 'paid', 'sum of revenue']);
+  var iPkg   = find(['package_id', 'packageid', 'package id', 'package']);
   if (iPhone === -1 || iName === -1 || iRev === -1) {
     throw new Error('Raw-Orders needs phone, name and revenue columns. Found: ' + header.join(', '));
+  }
+  if (iPkg === -1) {
+    throw new Error('Raw-Orders needs a package_id column (used to select the EduSkill Program packages). Found: ' + header.join(', '));
   }
 
   var rows = [];
   for (var r = 1; r < values.length; r++) {
     var row = values[r];
     if (!row[iPhone] && !row[iName]) continue;
-    rows.push({ phone: String(row[iPhone]), name: String(row[iName]), revenue: row[iRev] });
+    rows.push({
+      phone: String(row[iPhone]),
+      name: String(row[iName]),
+      revenue: row[iRev],
+      packageId: String(row[iPkg]).trim(),
+    });
   }
   return rows;
 }

@@ -18,19 +18,27 @@ export const maxDuration = 60;
  */
 
 const COHORT_NAME = "August EduSkill";
-const REVENUE_THRESHOLD = 1500;          // only paid > this get enrolled
+const REVENUE_THRESHOLD = 1499;          // enrol anyone who paid ABOVE this (i.e. >= 1500)
 const DEFAULT_PASSWORD = "August@2026";  // shared first-login password (reset via onboarding)
+
+// Only these Campus Program packages are the paid EduSkill Program:
+//   110023 = ADDA247 EDUSKILL PROGRAM (30-month / 1-month)
+//   110020 = EDUSKILL PROGRAM (Book your Seat)
+// Other packages (Profile Review, BankReady, etc.) are ignored regardless of price.
+const ALLOWED_PACKAGE_IDS = new Set(["110020", "110023"]);
 
 const digits10 = (s: unknown) => String(s ?? "").replace(/\D/g, "").slice(-10);
 
-interface IncomingRow { phone?: unknown; name?: unknown; revenue?: unknown }
+interface IncomingRow { phone?: unknown; name?: unknown; revenue?: unknown; packageId?: unknown }
 interface Person { phone: string; name: string; revenue: number }
 
-/** Dedup incoming rows by phone (keep max revenue + best-cased name), then
- *  keep only those above the threshold. */
+/** Keep only rows for the allowed EduSkill packages, dedup by phone (max
+ *  revenue + best-cased name), then keep only those above the threshold. */
 function qualify(rows: IncomingRow[]): Person[] {
   const byPhone = new Map<string, Person>();
   for (const r of rows) {
+    const packageId = String(r.packageId ?? "").trim();
+    if (!ALLOWED_PACKAGE_IDS.has(packageId)) continue;
     const phone = digits10(r.phone);
     if (phone.length !== 10) continue;
     const name = String(r.name ?? "").trim();
