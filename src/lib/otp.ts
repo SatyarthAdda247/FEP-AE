@@ -61,21 +61,28 @@ function providerConfigured(): boolean {
   return activeProvider() !== null;
 }
 
+// Fast2SMS OTP Template ID (DLT). Required by the /dev/otp/send API.
+// Set FAST2SMS_OTP_ID in env, or hardcode the default below.
+const FAST2SMS_OTP_ID = process.env.FAST2SMS_OTP_ID || "";
+
 async function sendViaFast2SMS(phone: string, code: string): Promise<void> {
-  // Fast2SMS OTP route: https://www.fast2sms.com/dev/bulkV2
-  // Sends "Your OTP: <code>" from Fast2SMS's OTP sender. No template needed.
-  const params = new URLSearchParams({
-    route: "otp",
-    variables_values: code,
-    numbers: phone, // 10-digit Indian number
-    flash: "0",
-  });
-  const res = await fetch(`https://www.fast2sms.com/dev/bulkV2?${params.toString()}`, {
-    method: "GET",
-    headers: { authorization: FAST2SMS_API_KEY },
+  if (!FAST2SMS_OTP_ID) {
+    throw new Error("FAST2SMS_OTP_ID (your Fast2SMS OTP Template ID) is not configured");
+  }
+  // Fast2SMS OTP API: https://www.fast2sms.com/dev/otp/send
+  // We generate/verify the code ourselves and pass it as `otp` so Fast2SMS
+  // just delivers it via the approved OTP template.
+  const res = await fetch("https://www.fast2sms.com/dev/otp/send", {
+    method: "POST",
+    headers: { authorization: FAST2SMS_API_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      mobile: phone,      // 10-digit Indian number
+      otp_id: FAST2SMS_OTP_ID,
+      otp: code,          // our own code (Fast2SMS delivers this exact value)
+      otp_expiry: 5,      // minutes — matches our OTP_TTL
+    }),
   });
   const body = await res.text().catch(() => "");
-  // Fast2SMS returns 200 with { return: true } on success, or an error JSON.
   if (!res.ok || !/"return"\s*:\s*true/.test(body)) {
     throw new Error(`Fast2SMS error ${res.status}: ${body.slice(0, 200)}`);
   }
