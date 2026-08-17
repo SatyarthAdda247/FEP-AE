@@ -367,41 +367,46 @@ function FacultyDashboardContent() {
 
       <AnimatePresence>
         {isEditingProfile && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto">
-            {/* Dark Blurred Backdrop */}
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 md:p-8 overflow-y-auto">
+            {/* Subtle Blurred Backdrop Overlay */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsEditingProfile(false)}
-              className="fixed inset-0 bg-black/80 backdrop-blur-md"
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm"
             />
 
-            {/* Modal Dialog Box */}
+            {/* Modal Dialog Card (Spacious Light Theme) */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              initial={{ opacity: 0, scale: 0.96, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              exit={{ opacity: 0, scale: 0.96, y: 16 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="relative z-10 w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#0f1118] text-white p-5 sm:p-6 md:p-8 shadow-2xl backdrop-blur-xl no-scrollbar"
+              className="relative z-10 w-full max-w-4xl max-h-[88vh] overflow-y-auto rounded-3xl border border-gray-200 bg-white text-gray-900 p-6 sm:p-8 md:p-10 shadow-2xl no-scrollbar"
             >
               {/* Sticky Header */}
-              <div className="sticky -top-5 sm:-top-6 md:-top-8 z-30 flex items-center justify-between border-b border-white/10 bg-[#0f1118]/95 pb-4 pt-1 backdrop-blur-md -mx-5 sm:-mx-6 md:-mx-8 px-5 sm:px-6 md:px-8 mb-6">
-                <div className="flex items-center gap-2">
-                  <UserCog className="h-4.5 w-4.5 text-emerald-400" />
-                  <h2 className="text-base font-semibold tracking-tight text-white">Manage Profile Details</h2>
+              <div className="sticky -top-6 sm:-top-8 md:-top-10 z-30 flex items-center justify-between border-b border-gray-100 bg-white/95 pb-4 pt-1 backdrop-blur-md -mx-6 sm:-mx-8 md:-mx-10 px-6 sm:px-8 md:px-10 mb-8">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 border border-emerald-100">
+                    <UserCog className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold tracking-tight text-gray-900">Manage Profile Details</h2>
+                    <p className="text-xs text-gray-500 font-normal">Update your onboarding profile and teaching preferences.</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                   <button
                     onClick={() => setIsEditingProfile(false)}
-                    className="rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 px-4 py-1.5 text-xs font-medium text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                    className="rounded-full border border-gray-300 bg-gray-50 hover:bg-gray-100 px-4.5 py-2 text-xs font-medium text-gray-700 transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleSaveProfile}
                     disabled={savingProfile}
-                    className="rounded-xl bg-emerald-600 px-5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50 transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-emerald-950/50"
+                    className="rounded-full bg-emerald-600 px-5 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
                   >
                     {savingProfile && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                     Save Details
@@ -411,139 +416,139 @@ function FacultyDashboardContent() {
 
               {/* Pending Request / Status Notification Banners */}
               {pendingRequest && (
-                <div className="mb-6 flex items-center gap-2.5 rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-xs text-sky-300">
-                  <Clock className="h-4 w-4 shrink-0 text-sky-400" />
+                <div className="mb-6 flex items-center gap-2.5 rounded-2xl border border-sky-200 bg-sky-50 px-4.5 py-3.5 text-xs text-sky-900 shadow-sm">
+                  <Clock className="h-4 w-4 shrink-0 text-sky-600" />
                   <div>
-                    <span className="font-semibold text-sky-200">Pending Admin Approval:</span> You have a profile update request waiting for admin review. Submitting new changes will update your pending request.
+                    <span className="font-semibold text-sky-950">Pending Admin Approval:</span> You have a profile update request waiting for admin review. Submitting new changes will update your pending request.
                   </div>
                 </div>
               )}
 
               {statusMessage && (
                 <div className={cn(
-                  "mb-6 rounded-xl px-4 py-3 text-xs border font-medium flex items-center justify-between",
-                  statusMessage.type === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :
-                  statusMessage.type === "info" ? "border-sky-500/30 bg-sky-500/10 text-sky-300" :
-                  "border-rose-500/30 bg-rose-500/10 text-rose-400"
+                  "mb-6 rounded-2xl px-4.5 py-3.5 text-xs border font-medium flex items-center justify-between shadow-sm",
+                  statusMessage.type === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-900" :
+                  statusMessage.type === "info" ? "border-sky-200 bg-sky-50 text-sky-900" :
+                  "border-rose-200 bg-rose-50 text-rose-900"
                 )}>
                   <span>{statusMessage.text}</span>
-                  <button onClick={() => setStatusMessage(null)} className="p-0.5 hover:opacity-70 text-zinc-400 hover:text-white cursor-pointer">
+                  <button onClick={() => setStatusMessage(null)} className="p-1 text-gray-400 hover:text-gray-700 cursor-pointer">
                     <X className="h-3.5 w-3.5" />
                   </button>
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-[130px_1fr] gap-6 items-start">
+              <div className="grid grid-cols-1 md:grid-cols-[140px_1fr] gap-8 items-start">
                 {/* Single Photo Upload Column */}
-                <div className="flex flex-col items-center gap-3">
-                  <div className="relative h-28 w-28 rounded-full border-2 border-emerald-500/30 overflow-hidden bg-[#161822] flex items-center justify-center shadow-xl">
+                <div className="flex flex-col items-center gap-3.5 pt-1">
+                  <div className="relative h-28 w-28 rounded-full border-2 border-emerald-500/20 overflow-hidden bg-gray-100 flex items-center justify-center shadow-md">
                     {editAvatar ? (
                       <img src={editAvatar} alt="Profile preview" className="h-full w-full object-cover" />
                     ) : (
-                      <Camera className="h-8 w-8 text-zinc-500" />
+                      <Camera className="h-8 w-8 text-gray-400" />
                     )}
                   </div>
-                  <label className="cursor-pointer rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:border-emerald-500/50 hover:text-white text-center transition-all">
+                  <label className="cursor-pointer rounded-full border border-gray-300 bg-white hover:bg-gray-50 px-4 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition-all text-center">
                     Upload Photo
                     <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
                   </label>
                 </div>
 
                 {/* Form Fields Grid */}
-                <div className="space-y-6">
+                <div className="space-y-7">
                   {/* Personal Information */}
                   <div>
-                    <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3">Personal Information</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5">
-                      <div className="sm:col-span-2 space-y-1">
-                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Full Name</label>
+                    <h3 className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-3.5">Personal Information</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="sm:col-span-2 space-y-1.5">
+                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Full Name</label>
                         <input
                           type="text"
                           value={editName}
                           onChange={(e) => setEditName(e.target.value)}
-                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-zinc-500"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
                           placeholder="Full Name"
                         />
                       </div>
 
-                      <div className="sm:col-span-2 space-y-1">
-                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Email Address</label>
+                      <div className="sm:col-span-2 space-y-1.5">
+                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Email Address</label>
                         <input
                           type="email"
                           value={editEmail}
                           onChange={(e) => setEditEmail(e.target.value)}
-                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-zinc-500"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
                           placeholder="email@example.com"
                         />
                       </div>
 
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Primary Mobile</label>
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Primary Mobile</label>
                         <input
                           type="tel"
                           value={editPhone}
                           onChange={(e) => setEditPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-zinc-500"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
                           placeholder="10-digit mobile"
                         />
                       </div>
 
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Backup Mobile</label>
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Backup Mobile</label>
                         <input
                           type="tel"
                           value={editBackupPhone}
                           onChange={(e) => setEditBackupPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-zinc-500"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
                           placeholder="Backup mobile (optional)"
                         />
                       </div>
 
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Age</label>
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Age</label>
                         <input
                           type="number"
                           value={editAge}
                           onChange={(e) => setEditAge(e.target.value)}
-                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-zinc-500"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
                           placeholder="Age"
                         />
                       </div>
 
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Date of Birth (DOB)</label>
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Date of Birth (DOB)</label>
                         <input
                           type="date"
                           value={editDob}
                           onChange={(e) => setEditDob(e.target.value)}
-                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
                         />
                       </div>
 
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Gender</label>
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Gender</label>
                         <select
                           value={editGender}
                           onChange={(e) => setEditGender(e.target.value)}
-                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all cursor-pointer"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all cursor-pointer"
                         >
-                          <option value="" className="bg-[#161822] text-white">Select Gender</option>
-                          <option value="Male" className="bg-[#161822] text-white">Male</option>
-                          <option value="Female" className="bg-[#161822] text-white">Female</option>
-                          <option value="Other" className="bg-[#161822] text-white">Other</option>
+                          <option value="">Select Gender</option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                          <option value="Other">Other</option>
                         </select>
                       </div>
 
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">T-Shirt Size</label>
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">T-Shirt Size</label>
                         <select
                           value={editTshirtSize}
                           onChange={(e) => setEditTshirtSize(e.target.value)}
-                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all cursor-pointer"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all cursor-pointer"
                         >
-                          <option value="" className="bg-[#161822] text-white">Select T-Shirt Size</option>
+                          <option value="">Select T-Shirt Size</option>
                           {["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL"].map((sz) => (
-                            <option key={sz} value={sz} className="bg-[#161822] text-white">{sz}</option>
+                            <option key={sz} value={sz}>{sz}</option>
                           ))}
                         </select>
                       </div>
@@ -551,16 +556,16 @@ function FacultyDashboardContent() {
                   </div>
 
                   {/* Teaching Details */}
-                  <div className="pt-2 border-t border-white/10">
-                    <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3">Teaching Details</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Subject (Teaching)</label>
+                  <div className="pt-4 border-t border-gray-100">
+                    <h3 className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-3.5">Teaching Details</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Subject (Teaching)</label>
                         <input
                           type="text"
                           value={editTeachingSubject}
                           onChange={(e) => setEditTeachingSubject(e.target.value)}
-                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-zinc-500"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
                           placeholder="e.g. Maths, Physics, CS"
                         />
                       </div>
@@ -568,63 +573,63 @@ function FacultyDashboardContent() {
                   </div>
 
                   {/* Address Details */}
-                  <div className="pt-2 border-t border-white/10">
-                    <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3">Address Details</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5">
-                      <div className="sm:col-span-2 space-y-1">
-                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Address Line 1</label>
+                  <div className="pt-4 border-t border-gray-100">
+                    <h3 className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-3.5">Address Details</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="sm:col-span-2 space-y-1.5">
+                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Address Line 1</label>
                         <input
                           type="text"
                           value={editAddressLine1}
                           onChange={(e) => setEditAddressLine1(e.target.value)}
-                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-zinc-500"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
                           placeholder="House/Flat No., Building Name, Street"
                         />
                       </div>
 
-                      <div className="sm:col-span-2 space-y-1">
-                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Address Line 2 (Optional)</label>
+                      <div className="sm:col-span-2 space-y-1.5">
+                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Address Line 2 (Optional)</label>
                         <input
                           type="text"
                           value={editAddressLine2}
                           onChange={(e) => setEditAddressLine2(e.target.value)}
-                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-zinc-500"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
                           placeholder="Landmark, Area, Locality"
                         />
                       </div>
 
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">City</label>
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">City</label>
                         <input
                           type="text"
                           value={editCity}
                           onChange={(e) => setEditCity(e.target.value)}
-                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-zinc-500"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
                           placeholder="City"
                         />
                       </div>
 
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">State</label>
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">State</label>
                         <select
                           value={editState}
                           onChange={(e) => setEditState(e.target.value)}
-                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all cursor-pointer"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all cursor-pointer"
                         >
-                          <option value="" className="bg-[#161822] text-white">Select State</option>
+                          <option value="">Select State</option>
                           {INDIAN_STATES.map((st) => (
-                            <option key={st} value={st} className="bg-[#161822] text-white">{st}</option>
+                            <option key={st} value={st}>{st}</option>
                           ))}
                         </select>
                       </div>
 
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Pincode</label>
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Pincode</label>
                         <input
                           type="text"
                           value={editPincode}
                           onChange={(e) => setEditPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                          className="w-full rounded-xl border border-white/10 bg-[#161822] px-3.5 py-2.5 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-zinc-500"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
                           placeholder="6-digit pincode"
                         />
                       </div>
@@ -632,26 +637,26 @@ function FacultyDashboardContent() {
                   </div>
 
                   {/* Custom Subjects Selection */}
-                  <div className="pt-3 border-t border-white/10 space-y-3">
+                  <div className="pt-4 border-t border-gray-100 space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
-                        <label className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider block">Custom Subjects Selection</label>
-                        <p className="text-[11px] text-zinc-400">Search given options or enter custom subjects below.</p>
+                        <label className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">Custom Subjects Selection</label>
+                        <p className="text-[11px] text-gray-500">Search given options or enter custom subjects below.</p>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2">
                         {/* Search bar */}
                         <div className="relative min-w-[180px]">
-                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400" />
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
                           <input
                             type="text"
                             value={subjectSearch}
                             onChange={(e) => setSubjectSearch(e.target.value)}
                             placeholder="Search subjects..."
-                            className="w-full rounded-xl border border-white/10 bg-[#161822] pl-8 pr-7 py-2 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-zinc-500"
+                            className="w-full rounded-xl border border-gray-200 bg-gray-50/80 pl-8 pr-7 py-2 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
                           />
                           {subjectSearch && (
-                            <button onClick={() => setSubjectSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white p-0.5 cursor-pointer">
+                            <button onClick={() => setSubjectSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 p-0.5 cursor-pointer">
                               <X className="h-3.5 w-3.5" />
                             </button>
                           )}
@@ -670,13 +675,13 @@ function FacultyDashboardContent() {
                               }
                             }}
                             placeholder="Enter custom subject..."
-                            className="w-[170px] rounded-xl border border-white/10 bg-[#161822] px-3 py-2 text-xs font-medium text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-zinc-500"
+                            className="w-[170px] rounded-xl border border-gray-200 bg-gray-50/80 px-3 py-2 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
                           />
                           <button
                             type="button"
                             onClick={handleAddCustomSubject}
                             disabled={!customSubjectInput.trim()}
-                            className="rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-40 transition-colors flex items-center gap-1 cursor-pointer shrink-0 shadow-sm"
+                            className="rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-40 transition-colors flex items-center gap-1 cursor-pointer shrink-0 shadow-sm"
                           >
                             <Plus className="h-3.5 w-3.5" />
                             Add
@@ -687,18 +692,18 @@ function FacultyDashboardContent() {
 
                     {/* Selected Subjects Badges */}
                     {editSubjects.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400 self-center mr-1">Selected ({editSubjects.length}):</span>
+                      <div className="flex flex-wrap gap-1.5 p-3.5 rounded-2xl border border-emerald-200 bg-emerald-50/60">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 self-center mr-1">Selected ({editSubjects.length}):</span>
                         {editSubjects.map((subIdOrName) => {
                           const matchingObj = subjects.find(s => s.subjectId === subIdOrName || s.name === subIdOrName);
                           const displayName = matchingObj ? matchingObj.name : subIdOrName;
                           return (
-                            <span key={subIdOrName} className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/20 px-3 py-1 text-xs font-medium text-emerald-200 shadow-sm">
+                            <span key={subIdOrName} className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-white px-3 py-1 text-xs font-semibold text-emerald-800 shadow-xs">
                               {displayName}
                               <button
                                 type="button"
                                 onClick={() => setEditSubjects(editSubjects.filter(x => x !== subIdOrName))}
-                                className="hover:text-rose-400 transition-colors cursor-pointer text-zinc-300 hover:text-white"
+                                className="text-gray-400 hover:text-rose-600 transition-colors cursor-pointer"
                               >
                                 <X className="h-3 w-3" />
                               </button>
@@ -709,12 +714,12 @@ function FacultyDashboardContent() {
                     )}
 
                     {/* Subject Options Grid */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 rounded-xl border border-white/10 bg-[#161822]/70 p-3.5 max-h-[180px] overflow-y-auto no-scrollbar">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 rounded-2xl border border-gray-200 bg-gray-50/60 p-4 max-h-[190px] overflow-y-auto no-scrollbar">
                       {filteredSubjectsOptions.length > 0 ? (
                         filteredSubjectsOptions.map((s) => {
                           const isChecked = editSubjects.includes(s.subjectId) || editSubjects.includes(s.name);
                           return (
-                            <label key={s.subjectId} className="flex items-center gap-2 text-xs text-zinc-300 hover:text-white cursor-pointer p-1.5 rounded-lg hover:bg-white/5 transition-colors">
+                            <label key={s.subjectId} className="flex items-center gap-2 text-xs text-gray-700 hover:text-gray-900 cursor-pointer p-1.5 rounded-lg hover:bg-white transition-colors">
                               <input
                                 type="checkbox"
                                 checked={isChecked}
@@ -725,14 +730,14 @@ function FacultyDashboardContent() {
                                     setEditSubjects([...editSubjects, s.subjectId]);
                                   }
                                 }}
-                                className="rounded border-white/20 text-emerald-500 bg-[#161822] focus:ring-emerald-500/30"
+                                className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500/30"
                               />
                               <span className="truncate">{s.name}</span>
                             </label>
                           );
                         })
                       ) : (
-                        <div className="col-span-full py-4 text-center text-xs text-zinc-400">
+                        <div className="col-span-full py-4 text-center text-xs text-gray-500">
                           No predefined subjects match "{subjectSearch}". Use the "Enter custom subject" field above to add custom subjects.
                         </div>
                       )}
