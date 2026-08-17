@@ -45,7 +45,11 @@ export async function PUT(req: Request) {
   }
 
   const body = await req.json();
-  const { userId, name, age, dob, subjects, avatarUrl, gender, teachingSubject, cohort, examTarget } = body;
+  const {
+    userId, name, email, phone, backupPhone, age, dob, gender, tshirtSize,
+    teachingSubject, addressLine1, addressLine2, city, state, pincode,
+    subjects, avatarUrl, cohort, examTarget
+  } = body;
 
   // Faculty can only update themselves. Managers/admins can update anyone.
   const targetUserId = userId || user.userId;
@@ -69,12 +73,21 @@ export async function PUT(req: Request) {
   // Build update expression dynamically based on provided fields
   const updateFields: Record<string, unknown> = {};
   if (name !== undefined) updateFields.name = name;
+  if (email !== undefined) updateFields.email = email;
+  if (phone !== undefined) updateFields.phone = phone;
+  if (backupPhone !== undefined) updateFields.backupPhone = backupPhone;
   if (age !== undefined) updateFields.age = Number(age);
   if (dob !== undefined) updateFields.dob = dob;
+  if (gender !== undefined) updateFields.gender = gender;
+  if (tshirtSize !== undefined) updateFields.tshirtSize = tshirtSize;
+  if (teachingSubject !== undefined) updateFields.teachingSubject = teachingSubject;
+  if (addressLine1 !== undefined) updateFields.addressLine1 = addressLine1;
+  if (addressLine2 !== undefined) updateFields.addressLine2 = addressLine2;
+  if (city !== undefined) updateFields.city = city;
+  if (state !== undefined) updateFields.state = state;
+  if (pincode !== undefined) updateFields.pincode = pincode;
   if (subjects !== undefined) updateFields.subjects = subjects;
   if (avatarUrl !== undefined) updateFields.avatarUrl = avatarUrl;
-  if (gender !== undefined) updateFields.gender = gender;
-  if (teachingSubject !== undefined) updateFields.teachingSubject = teachingSubject;
   if (cohort !== undefined) updateFields.cohort = cohort;
   if (examTarget !== undefined) updateFields.examTarget = examTarget;
 
@@ -82,6 +95,53 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: "No fields to update" }, { status: 400 });
   }
 
+  // If requested by a faculty member, create a pending approval request for admin review!
+  if (user.role === "eduskill_faculty") {
+    const { PutCommand } = await import("@aws-sdk/lib-dynamodb");
+    const { v4: uuid } = await import("uuid");
+
+    const targetUserRes = await ddb.send(
+      new GetCommand({ TableName: TABLES.USERS, Key: { userId: targetUserId } })
+    );
+    const dbUser = targetUserRes.Item as User | undefined;
+    if (!dbUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const currentValues: Record<string, unknown> = {};
+    for (const key of Object.keys(updateFields)) {
+      currentValues[key] = (dbUser as any)[key] ?? null;
+    }
+
+    const requestId = uuid();
+    const requestItem = {
+      requestId,
+      userId: targetUserId,
+      userName: dbUser.name,
+      userEmail: dbUser.email,
+      cohort: dbUser.cohort,
+      status: "pending",
+      createdAt: new Date().toISOString(),
+      changes: updateFields,
+      currentValues,
+    };
+
+    await ddb.send(
+      new PutCommand({
+        TableName: TABLES.PROFILE_REQUESTS,
+        Item: requestItem,
+      })
+    );
+
+    return NextResponse.json({
+      success: true,
+      pendingApproval: true,
+      requestId,
+      message: "Profile edit request submitted for admin approval",
+    });
+  }
+
+  // For Admin or Manager, update directly in DynamoDB
   const updateParts: string[] = [];
   const expressionAttributeNames: Record<string, string> = {};
   const expressionAttributeValues: Record<string, unknown> = {};

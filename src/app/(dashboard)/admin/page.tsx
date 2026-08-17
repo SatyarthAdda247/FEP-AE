@@ -125,6 +125,9 @@ export default function AdminDashboard() {
       {/* Pending approvals */}
       <ApprovalsPanel />
 
+      {/* Profile edit requests for admin approval */}
+      <ProfileRequestsPanel />
+
       {/* Cohorts */}
       <CohortsPanel data={cohortsQ.data} isLoading={cohortsQ.isLoading} />
 
@@ -736,6 +739,132 @@ function OnboardingPanel({ cohortNames }: { cohortNames: string[] }) {
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+function ProfileRequestsPanel() {
+  const qc = useQueryClient();
+  const requestsQ = useQuery<{ requests: any[] }>({
+    queryKey: ["admin-profile-requests"],
+    queryFn: () => fetch("/api/profile-requests").then(r => r.json()),
+    refetchInterval: 10_000,
+  });
+
+  const actionMut = useMutation({
+    mutationFn: (body: { requestId: string; action: "approve" | "reject" }) =>
+      fetch("/api/profile-requests/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }).then(r => r.json()),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-profile-requests"] });
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      qc.invalidateQueries({ queryKey: ["faculty-stats"] });
+    },
+  });
+
+  const requests = requestsQ.data?.requests ?? [];
+  const pendingRequests = requests.filter(r => r.status === "pending");
+
+  if (requestsQ.isLoading || pendingRequests.length === 0) return null;
+
+  const FIELD_LABELS: Record<string, string> = {
+    name: "Full Name",
+    email: "Email Address",
+    phone: "Primary Mobile",
+    backupPhone: "Backup Mobile",
+    age: "Age",
+    dob: "Date of Birth",
+    gender: "Gender",
+    tshirtSize: "T-Shirt Size",
+    teachingSubject: "Teaching Subject",
+    addressLine1: "Address Line 1",
+    addressLine2: "Address Line 2",
+    city: "City",
+    state: "State",
+    pincode: "Pincode",
+    subjects: "Subjects Selection",
+    avatarUrl: "Profile Photo",
+  };
+
+  return (
+    <div className="glass-strong rounded-2xl p-5 mb-6 border border-sky-500/20">
+      <div className="flex items-center gap-2 mb-1">
+        <ClipboardCheck className="h-4 w-4 text-sky-400" />
+        <h2 className="text-sm font-semibold">Faculty Profile Edit Requests</h2>
+        <span className="rounded-full bg-sky-500/10 border border-sky-500/25 text-sky-400 px-2 py-0.5 text-[10px] font-medium">
+          {pendingRequests.length} pending
+        </span>
+      </div>
+      <p className="text-xs text-fg-muted mb-4">
+        Faculty members requested updates to their onboarding profile details. Review requested changes below.
+      </p>
+
+      <div className="space-y-3">
+        {pendingRequests.map(r => {
+          const changeEntries = Object.entries(r.changes ?? {});
+          return (
+            <div key={r.requestId} className="rounded-xl border border-border/60 bg-bg-elev/40 p-4 space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <span className="text-sm font-semibold text-fg">{r.userName}</span>
+                  <span className="text-xs text-fg-muted ml-2">({r.userEmail})</span>
+                  {r.cohort && (
+                    <span className="ml-2 rounded-full border border-sky-500/20 bg-sky-500/10 text-sky-400 px-2 py-0.5 text-[10px] font-medium">
+                      {r.cohort}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => actionMut.mutate({ requestId: r.requestId, action: "approve" })}
+                    disabled={actionMut.isPending}
+                    className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 px-3 py-1.5 text-xs font-medium hover:bg-emerald-500/20 disabled:opacity-40 cursor-pointer"
+                  >
+                    <Check className="h-3.5 w-3.5" /> Approve
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm(`Reject profile edit request for ${r.userName}?`)) {
+                        actionMut.mutate({ requestId: r.requestId, action: "reject" });
+                      }
+                    }}
+                    disabled={actionMut.isPending}
+                    className="flex items-center gap-1.5 rounded-full bg-rose-500/10 border border-rose-500/25 text-rose-400 px-3 py-1.5 text-xs font-medium hover:bg-rose-500/20 disabled:opacity-40 cursor-pointer"
+                  >
+                    <X className="h-3.5 w-3.5" /> Reject
+                  </button>
+                </div>
+              </div>
+
+              {/* Diff list */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-1 border-t border-border/40 text-xs">
+                {changeEntries.map(([key, newVal]) => {
+                  const oldVal = (r.currentValues ?? {})[key];
+                  const label = FIELD_LABELS[key] || key;
+                  const formatVal = (v: any) => {
+                    if (v === null || v === undefined || v === "") return <span className="text-fg-dim italic">Empty</span>;
+                    if (Array.isArray(v)) return v.join(", ");
+                    return String(v);
+                  };
+                  return (
+                    <div key={key} className="rounded-lg border border-border bg-bg-elev/30 p-2 space-y-1">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-fg-muted block">{label}</span>
+                      <div className="text-[11px] space-y-0.5">
+                        <div className="text-rose-400/80 line-through truncate">Was: {formatVal(oldVal)}</div>
+                        <div className="text-emerald-400 font-medium truncate">New: {formatVal(newVal)}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {actionMut.data?.error && <p className="mt-3 text-xs text-rose-500">{actionMut.data.error}</p>}
     </div>
   );
 }

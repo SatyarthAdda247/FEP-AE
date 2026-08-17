@@ -25,6 +25,7 @@ export const TABLES = {
   RATINGS: "fep-manager-ratings",
   SUBJECTS: "fep-subjects",
   YT_STATS: "fep-yt-stats",   // per-faculty YouTube aggregate cache (synced hourly)
+  PROFILE_REQUESTS: "fep-profile-requests", // pending faculty profile edit requests for admin approval
 } as const;
 
 /**

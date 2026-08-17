@@ -2,14 +2,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo, useEffect, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Inbox, Sparkles, Loader2 } from "lucide-react";
+import { Inbox, Sparkles, Loader2, Search, Plus, Clock } from "lucide-react";
 import { HeroStats } from "@/components/HeroStats";
 import { SubjectTabs } from "@/components/SubjectTabs";
 import { VideoCard } from "@/components/VideoCard";
 import { VideoDrawer } from "@/components/VideoDrawer";
 import { VideoUploader } from "@/components/VideoUploader";
 import { WelcomeGuide, type TourStep } from "@/components/WelcomeGuide";
-import type { Subject, Video, GradiAnalysis, JWTPayload } from "@/types";
+import { INDIAN_STATES, type Subject, type Video, type GradiAnalysis, type JWTPayload } from "@/types";
 import { useSearchParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
@@ -27,11 +27,22 @@ const TOUR_STEPS: TourStep[] = [
 interface FacultyStats {
   facultyId: string;
   facultyName?: string;
+  facultyEmail?: string;
+  phone?: string;
+  backupPhone?: string;
   totalVideos: number;
   netScore: number;
   pctRatedByManager: number;
   age?: number;
   dob?: string;
+  gender?: string;
+  tshirtSize?: string;
+  teachingSubject?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
   subjects?: string[];
   avatarUrl?: string;
   // YouTube aggregate stats (synced hourly)
@@ -83,13 +94,26 @@ function FacultyDashboardContent() {
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editBackupPhone, setEditBackupPhone] = useState("");
   const [editAge, setEditAge] = useState("");
   const [editDob, setEditDob] = useState("");
+  const [editGender, setEditGender] = useState("");
+  const [editTshirtSize, setEditTshirtSize] = useState("");
+  const [editTeachingSubject, setEditTeachingSubject] = useState("");
+  const [editAddressLine1, setEditAddressLine1] = useState("");
+  const [editAddressLine2, setEditAddressLine2] = useState("");
+  const [editCity, setEditCity] = useState("");
+  const [editState, setEditState] = useState("");
+  const [editPincode, setEditPincode] = useState("");
   const [editSubjects, setEditSubjects] = useState<string[]>([]);
   const [editAvatar, setEditAvatar] = useState("");
-  const [editGender, setEditGender] = useState("");
-  const [editTeachingSubject, setEditTeachingSubject] = useState("");
+
+  const [subjectSearch, setSubjectSearch] = useState("");
+  const [customSubjectInput, setCustomSubjectInput] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<{ type: "success" | "info" | "error"; text: string } | null>(null);
 
   const [showTrackerModal, setShowTrackerModal] = useState(false);
   const [hasCheckedTracker, setHasCheckedTracker] = useState(false);
@@ -117,6 +141,19 @@ function FacultyDashboardContent() {
   const subjects = subjectsQ.data?.subjects ?? [];
   const stats = statsQ.data;
   const user = meQ.data?.user;
+
+  const profileRequestsQ = useQuery<{ requests: any[] }>({
+    queryKey: ["my-profile-requests", stats?.facultyId || user?.userId],
+    queryFn: async () => {
+      const targetId = stats?.facultyId || user?.userId;
+      if (!targetId) return { requests: [] };
+      return (await fetch(`/api/profile-requests?userId=${targetId}`)).json();
+    },
+    enabled: !!(stats?.facultyId || user?.userId),
+    refetchInterval: 10_000,
+  });
+
+  const pendingRequest = (profileRequestsQ.data?.requests ?? []).find((r: any) => r.status === "pending");
 
   const isOwnProfile = user?.role === "eduskill_faculty" && (!facultyId || facultyId === user?.userId);
 
@@ -156,17 +193,44 @@ function FacultyDashboardContent() {
   useEffect(() => {
     if (stats) {
       setEditName(stats.facultyName || "");
+      setEditEmail(stats.facultyEmail || (user as any)?.email || "");
+      setEditPhone(stats.phone || (user as any)?.phone || "");
+      setEditBackupPhone(stats.backupPhone || "");
       setEditAge(stats.age ? String(stats.age) : "");
       setEditDob(stats.dob || "");
+      setEditGender(stats.gender || "");
+      setEditTshirtSize(stats.tshirtSize || "");
+      setEditTeachingSubject(stats.teachingSubject || "");
+      setEditAddressLine1(stats.addressLine1 || "");
+      setEditAddressLine2(stats.addressLine2 || "");
+      setEditCity(stats.city || "");
+      setEditState(stats.state || "");
+      setEditPincode(stats.pincode || "");
       setEditSubjects(stats.subjects || []);
       setEditAvatar(stats.avatarUrl || "");
-      setEditGender((stats as any).gender || "");
-      setEditTeachingSubject((stats as any).teachingSubject || "");
     }
-  }, [stats]);
+  }, [stats, user]);
+
+  const filteredSubjectsOptions = useMemo(() => {
+    if (!subjectSearch.trim()) return subjects;
+    const query = subjectSearch.toLowerCase().trim();
+    return subjects.filter(s => s.name.toLowerCase().includes(query) || s.subjectId.toLowerCase().includes(query));
+  }, [subjects, subjectSearch]);
+
+  function handleAddCustomSubject() {
+    const trimmed = customSubjectInput.trim();
+    if (!trimmed) return;
+    if (editSubjects.some(s => s.toLowerCase() === trimmed.toLowerCase())) {
+      setCustomSubjectInput("");
+      return;
+    }
+    setEditSubjects(prev => [...prev, trimmed]);
+    setCustomSubjectInput("");
+  }
 
   async function handleSaveProfile() {
     setSavingProfile(true);
+    setStatusMessage(null);
     try {
       const res = await fetch("/api/users", {
         method: "PUT",
@@ -174,23 +238,42 @@ function FacultyDashboardContent() {
         body: JSON.stringify({
           userId: stats?.facultyId || user?.userId,
           name: editName,
+          email: editEmail,
+          phone: editPhone,
+          backupPhone: editBackupPhone || undefined,
           age: editAge ? Number(editAge) : undefined,
           dob: editDob || undefined,
+          gender: editGender || undefined,
+          tshirtSize: editTshirtSize || undefined,
+          teachingSubject: editTeachingSubject || undefined,
+          addressLine1: editAddressLine1 || undefined,
+          addressLine2: editAddressLine2 || undefined,
+          city: editCity || undefined,
+          state: editState || undefined,
+          pincode: editPincode || undefined,
           subjects: editSubjects,
           avatarUrl: editAvatar || undefined,
-          gender: editGender || undefined,
-          teachingSubject: editTeachingSubject || undefined,
         }),
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        statsQ.refetch();
-        setIsEditingProfile(false);
+        if (data.pendingApproval) {
+          setStatusMessage({
+            type: "info",
+            text: "Profile update request submitted for admin approval! An admin will review your changes.",
+          });
+          profileRequestsQ.refetch();
+        } else {
+          setStatusMessage({ type: "success", text: "Profile details updated successfully!" });
+          statsQ.refetch();
+          setTimeout(() => setIsEditingProfile(false), 1200);
+        }
       } else {
-        const errData = await res.json().catch(() => ({}));
-        alert(`Failed to save details: ${errData.error || "Unknown error"}${errData.details ? ` (${errData.details})` : ""}`);
+        setStatusMessage({ type: "error", text: `Failed to save details: ${data.error || "Unknown error"}` });
       }
     } catch (err) {
       console.error(err);
+      setStatusMessage({ type: "error", text: "Failed to send request. Please try again." });
     } finally {
       setSavingProfile(false);
     }
@@ -326,88 +409,333 @@ function FacultyDashboardContent() {
                   </label>
                 </div>
 
-                {/* Form Fields */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Full Name</label>
-                    <input
-                      type="text"
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30"
-                      placeholder="Name"
-                    />
+              {/* Pending Request / Status Notification Banners */}
+              {pendingRequest && (
+                <div className="flex items-center gap-2.5 rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-xs text-sky-300">
+                  <Clock className="h-4 w-4 shrink-0 text-sky-400" />
+                  <div>
+                    <span className="font-semibold">Pending Admin Approval:</span> You have a profile update request waiting for admin review. Submitting new changes will update your pending request.
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Age</label>
-                    <input
-                      type="number"
-                      value={editAge}
-                      onChange={(e) => setEditAge(e.target.value)}
-                      className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30"
-                      placeholder="Age"
-                    />
+                </div>
+              )}
+
+              {statusMessage && (
+                <div className={cn(
+                  "rounded-xl px-4 py-3 text-xs border font-medium flex items-center justify-between",
+                  statusMessage.type === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :
+                  statusMessage.type === "info" ? "border-sky-500/30 bg-sky-500/10 text-sky-300" :
+                  "border-rose-500/30 bg-rose-500/10 text-rose-400"
+                )}>
+                  <span>{statusMessage.text}</span>
+                  <button onClick={() => setStatusMessage(null)} className="text-xs hover:opacity-70">✕</button>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-[140px_1fr] gap-6 items-start">
+                {/* Photo Upload */}
+                <div className="flex flex-col items-center gap-3">
+                  <div className="relative h-24 w-24 rounded-full border border-border overflow-hidden bg-bg-elev flex items-center justify-center shadow-inner">
+                    {editAvatar ? (
+                      <img src={editAvatar} alt="Profile preview" className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="text-2xl text-fg-dim">📷</span>
+                    )}
                   </div>
-                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Date of Birth (DOB)</label>
-                    <input
-                      type="date"
-                      value={editDob}
-                      onChange={(e) => setEditDob(e.target.value)}
-                      className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30 text-white"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Gender</label>
-                    <select
-                      value={editGender}
-                      onChange={(e) => setEditGender(e.target.value)}
-                      className="w-full rounded-lg border border-border bg-[#181a20] px-3 py-2 text-sm outline-none focus:border-fg/30 text-white"
-                    >
-                      <option value="">Select Gender</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Subject (Teaching)</label>
-                    <input
-                      type="text"
-                      value={editTeachingSubject}
-                      onChange={(e) => setEditTeachingSubject(e.target.value)}
-                      className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30"
-                      placeholder="e.g. Maths, Physics"
-                    />
+                  <label className="cursor-pointer rounded-full border border-border bg-bg-elev px-3 py-1 text-[11px] font-medium text-fg hover:border-border-strong text-center transition-colors">
+                    Upload Photo
+                    <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                  </label>
+                </div>
+
+                {/* Form Fields Grid */}
+                <div className="space-y-5">
+                  {/* Personal Information */}
+                  <div>
+                    <h3 className="text-xs font-semibold text-fg/80 uppercase tracking-wider mb-3">Personal Information</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Full Name</label>
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30"
+                          placeholder="Name"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Email Address</label>
+                        <input
+                          type="email"
+                          value={editEmail}
+                          onChange={(e) => setEditEmail(e.target.value)}
+                          className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30"
+                          placeholder="email@example.com"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Primary Mobile</label>
+                        <input
+                          type="tel"
+                          value={editPhone}
+                          onChange={(e) => setEditPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                          className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30"
+                          placeholder="10-digit mobile"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Backup Mobile</label>
+                        <input
+                          type="tel"
+                          value={editBackupPhone}
+                          onChange={(e) => setEditBackupPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                          className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30"
+                          placeholder="Backup mobile (optional)"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Age</label>
+                        <input
+                          type="number"
+                          value={editAge}
+                          onChange={(e) => setEditAge(e.target.value)}
+                          className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30"
+                          placeholder="Age"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Date of Birth (DOB)</label>
+                        <input
+                          type="date"
+                          value={editDob}
+                          onChange={(e) => setEditDob(e.target.value)}
+                          className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30 text-white"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Gender</label>
+                        <select
+                          value={editGender}
+                          onChange={(e) => setEditGender(e.target.value)}
+                          className="w-full rounded-lg border border-border bg-[#181a20] px-3 py-2 text-sm outline-none focus:border-fg/30 text-white"
+                        >
+                          <option value="">Select Gender</option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">T-Shirt Size</label>
+                        <select
+                          value={editTshirtSize}
+                          onChange={(e) => setEditTshirtSize(e.target.value)}
+                          className="w-full rounded-lg border border-border bg-[#181a20] px-3 py-2 text-sm outline-none focus:border-fg/30 text-white"
+                        >
+                          <option value="">Select T-Shirt Size</option>
+                          {["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL"].map((sz) => (
+                            <option key={sz} value={sz}>{sz}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Customizable Subjects */}
-                  <div className="sm:col-span-3 space-y-2">
-                    <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider block">Custom Subjects Selection</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2 rounded-xl border border-border bg-bg-elev/20 p-3 max-h-[160px] overflow-y-auto no-scrollbar">
-                      {subjects.map((s) => {
-                        const isChecked = editSubjects.includes(s.subjectId);
-                        return (
-                          <label key={s.subjectId} className="flex items-center gap-2 text-xs text-fg-muted hover:text-fg cursor-pointer p-1 rounded hover:bg-bg-elev/40">
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => {
-                                if (isChecked) {
-                                  setEditSubjects(editSubjects.filter((x) => x !== s.subjectId));
-                                } else {
-                                  setEditSubjects([...editSubjects, s.subjectId]);
-                                }
-                              }}
-                              className="rounded border-border text-fg bg-bg-elev"
-                            />
-                            <span className="truncate">{s.name}</span>
-                          </label>
-                        );
-                      })}
+                  {/* Teaching Details */}
+                  <div>
+                    <h3 className="text-xs font-semibold text-fg/80 uppercase tracking-wider mb-3">Teaching Details</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Subject (Teaching)</label>
+                        <input
+                          type="text"
+                          value={editTeachingSubject}
+                          onChange={(e) => setEditTeachingSubject(e.target.value)}
+                          className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30"
+                          placeholder="e.g. Maths, Physics, CS"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Address Details */}
+                  <div>
+                    <h3 className="text-xs font-semibold text-fg/80 uppercase tracking-wider mb-3">Address Details</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5">
+                      <div className="sm:col-span-2 space-y-1">
+                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Address Line 1</label>
+                        <input
+                          type="text"
+                          value={editAddressLine1}
+                          onChange={(e) => setEditAddressLine1(e.target.value)}
+                          className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30"
+                          placeholder="House/Flat No., Building Name, Street"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2 space-y-1">
+                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Address Line 2 (Optional)</label>
+                        <input
+                          type="text"
+                          value={editAddressLine2}
+                          onChange={(e) => setEditAddressLine2(e.target.value)}
+                          className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30"
+                          placeholder="Landmark, Area, Locality"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">City</label>
+                        <input
+                          type="text"
+                          value={editCity}
+                          onChange={(e) => setEditCity(e.target.value)}
+                          className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30"
+                          placeholder="City"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">State</label>
+                        <select
+                          value={editState}
+                          onChange={(e) => setEditState(e.target.value)}
+                          className="w-full rounded-lg border border-border bg-[#181a20] px-3 py-2 text-sm outline-none focus:border-fg/30 text-white"
+                        >
+                          <option value="">Select State</option>
+                          {INDIAN_STATES.map((st) => (
+                            <option key={st} value={st}>{st}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">Pincode</label>
+                        <input
+                          type="text"
+                          value={editPincode}
+                          onChange={(e) => setEditPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                          className="w-full rounded-lg border border-border bg-bg-elev/40 px-3 py-2 text-sm outline-none focus:border-fg/30"
+                          placeholder="6-digit pincode"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Custom Subjects Selection */}
+                  <div className="pt-3 border-t border-border/50 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <label className="text-[11px] font-semibold text-fg-muted uppercase tracking-wider block">Custom Subjects Selection</label>
+                        <p className="text-[11px] text-fg-dim">Search given options or enter custom subjects below.</p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* Search bar */}
+                        <div className="relative min-w-[180px]">
+                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-fg-muted" />
+                          <input
+                            type="text"
+                            value={subjectSearch}
+                            onChange={(e) => setSubjectSearch(e.target.value)}
+                            placeholder="Search subjects..."
+                            className="w-full rounded-lg border border-border bg-bg-elev/60 pl-8 pr-3 py-1.5 text-xs outline-none focus:border-fg/30"
+                          />
+                          {subjectSearch && (
+                            <button onClick={() => setSubjectSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-fg-dim hover:text-fg text-xs font-bold cursor-pointer">×</button>
+                          )}
+                        </div>
+
+                        {/* Add custom subject */}
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="text"
+                            value={customSubjectInput}
+                            onChange={(e) => setCustomSubjectInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                handleAddCustomSubject();
+                              }
+                            }}
+                            placeholder="Enter custom subject..."
+                            className="w-[170px] rounded-lg border border-border bg-bg-elev/60 px-2.5 py-1.5 text-xs outline-none focus:border-fg/30"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddCustomSubject}
+                            disabled={!customSubjectInput.trim()}
+                            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-40 transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            Add
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Selected Subjects Badges */}
+                    {editSubjects.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 p-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400 self-center mr-1">Selected ({editSubjects.length}):</span>
+                        {editSubjects.map((subIdOrName) => {
+                          const matchingObj = subjects.find(s => s.subjectId === subIdOrName || s.name === subIdOrName);
+                          const displayName = matchingObj ? matchingObj.name : subIdOrName;
+                          return (
+                            <span key={subIdOrName} className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-300">
+                              {displayName}
+                              <button
+                                type="button"
+                                onClick={() => setEditSubjects(editSubjects.filter(x => x !== subIdOrName))}
+                                className="hover:text-rose-400 transition-colors text-xs font-bold ml-0.5 cursor-pointer"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Subject Options Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 rounded-xl border border-border bg-bg-elev/20 p-3 max-h-[180px] overflow-y-auto no-scrollbar">
+                      {filteredSubjectsOptions.length > 0 ? (
+                        filteredSubjectsOptions.map((s) => {
+                          const isChecked = editSubjects.includes(s.subjectId) || editSubjects.includes(s.name);
+                          return (
+                            <label key={s.subjectId} className="flex items-center gap-2 text-xs text-fg-muted hover:text-fg cursor-pointer p-1 rounded hover:bg-bg-elev/40">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => {
+                                  if (isChecked) {
+                                    setEditSubjects(editSubjects.filter((x) => x !== s.subjectId && x !== s.name));
+                                  } else {
+                                    setEditSubjects([...editSubjects, s.subjectId]);
+                                  }
+                                }}
+                                className="rounded border-border text-fg bg-bg-elev"
+                              />
+                              <span className="truncate">{s.name}</span>
+                            </label>
+                          );
+                        })
+                      ) : (
+                        <div className="col-span-full py-4 text-center text-xs text-fg-dim">
+                          No predefined subjects match "{subjectSearch}". Use the "Enter custom subject" field above to add custom subjects.
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
+              </div>
               </div>
             </div>
           </motion.div>
