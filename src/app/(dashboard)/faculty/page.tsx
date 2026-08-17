@@ -366,52 +366,51 @@ function FacultyDashboardContent() {
 
       <AnimatePresence>
         {isEditingProfile && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mb-8 overflow-hidden mt-6"
-          >
-            <div className="glass-strong rounded-2xl p-5 md:p-6 space-y-6 border border-border">
-              <div className="flex items-center justify-between border-b border-border pb-3">
-                <h2 className="text-sm font-semibold tracking-tight">Manage Profile Details</h2>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto">
+            {/* Blurred Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsEditingProfile(false)}
+              className="fixed inset-0 bg-black/75 backdrop-blur-md"
+            />
+
+            {/* Modal Dialog */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="relative z-10 w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl border border-border bg-bg-card/95 p-5 sm:p-6 md:p-8 shadow-2xl backdrop-blur-xl no-scrollbar"
+            >
+              {/* Sticky Header */}
+              <div className="sticky -top-5 sm:-top-6 md:-top-8 z-30 flex items-center justify-between border-b border-border/80 bg-bg-card/95 pb-4 pt-1 backdrop-blur-md -mx-5 sm:-mx-6 md:-mx-8 px-5 sm:px-6 md:px-8 mb-6">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-emerald-400" />
+                  <h2 className="text-base font-semibold tracking-tight text-fg">Manage Profile Details</h2>
+                </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setIsEditingProfile(false)}
-                    className="rounded-full border border-border bg-bg-elev/50 px-3 py-1.5 text-xs font-medium text-fg hover:border-border-strong cursor-pointer"
+                    className="rounded-full border border-border bg-bg-elev/60 px-4 py-1.5 text-xs font-medium text-fg hover:border-border-strong transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleSaveProfile}
                     disabled={savingProfile}
-                    className="rounded-full bg-fg px-4 py-1.5 text-xs font-medium text-bg hover:bg-fg/90 disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                    className="rounded-full bg-emerald-600 px-5 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50 transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
                   >
-                    {savingProfile && <Loader2 className="h-3 w-3 animate-spin" />}
+                    {savingProfile && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                     Save Details
                   </button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-[140px_1fr] gap-6 items-start">
-                {/* Photo Upload */}
-                <div className="flex flex-col items-center gap-3">
-                  <div className="relative h-24 w-24 rounded-full border border-border overflow-hidden bg-bg-elev flex items-center justify-center">
-                    {editAvatar ? (
-                      <img src={editAvatar} alt="Profile preview" className="h-full w-full object-cover" />
-                    ) : (
-                      <span className="text-2xl text-fg-dim">📷</span>
-                    )}
-                  </div>
-                  <label className="cursor-pointer rounded-full border border-border bg-bg-elev px-3 py-1 text-[11px] font-medium text-fg hover:border-border-strong text-center">
-                    Upload Photo
-                    <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
-                  </label>
-                </div>
-
               {/* Pending Request / Status Notification Banners */}
               {pendingRequest && (
-                <div className="flex items-center gap-2.5 rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-xs text-sky-300">
+                <div className="mb-6 flex items-center gap-2.5 rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-xs text-sky-300">
                   <Clock className="h-4 w-4 shrink-0 text-sky-400" />
                   <div>
                     <span className="font-semibold">Pending Admin Approval:</span> You have a profile update request waiting for admin review. Submitting new changes will update your pending request.
@@ -421,7 +420,7 @@ function FacultyDashboardContent() {
 
               {statusMessage && (
                 <div className={cn(
-                  "rounded-xl px-4 py-3 text-xs border font-medium flex items-center justify-between",
+                  "mb-6 rounded-xl px-4 py-3 text-xs border font-medium flex items-center justify-between",
                   statusMessage.type === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :
                   statusMessage.type === "info" ? "border-sky-500/30 bg-sky-500/10 text-sky-300" :
                   "border-rose-500/30 bg-rose-500/10 text-rose-400"
@@ -431,8 +430,8 @@ function FacultyDashboardContent() {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-[140px_1fr] gap-6 items-start">
-                {/* Photo Upload */}
+              <div className="grid grid-cols-1 md:grid-cols-[130px_1fr] gap-6 items-start">
+                {/* Single Photo Upload Column */}
                 <div className="flex flex-col items-center gap-3">
                   <div className="relative h-24 w-24 rounded-full border border-border overflow-hidden bg-bg-elev flex items-center justify-center shadow-inner">
                     {editAvatar ? (
@@ -448,7 +447,7 @@ function FacultyDashboardContent() {
                 </div>
 
                 {/* Form Fields Grid */}
-                <div className="space-y-5">
+                <div className="space-y-6">
                   {/* Personal Information */}
                   <div>
                     <h3 className="text-xs font-semibold text-fg/80 uppercase tracking-wider mb-3">Personal Information</h3>
@@ -736,9 +735,8 @@ function FacultyDashboardContent() {
                   </div>
                 </div>
               </div>
-              </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
