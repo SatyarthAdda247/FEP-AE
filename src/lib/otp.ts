@@ -42,25 +42,42 @@ interface OtpRecord {
   ttl: number;         // epoch seconds (DynamoDB TTL)
 }
 
+// Pick a provider by whichever credentials are present. Fast2SMS is the
+// simplest free option (free signup credits, no DLT template needed for its
+// OTP route); MSG91 is the enterprise option. With neither set → dev mode.
+function activeProvider(): "fast2sms" | "msg91" | null {
+  if (process.env.FAST2SMS_API_KEY) return "fast2sms";
+  if (process.env.MSG91_AUTH_KEY && process.env.MSG91_TEMPLATE_ID) return "msg91";
+  return null;
+}
 function providerConfigured(): boolean {
-  return Boolean(process.env.MSG91_AUTH_KEY && process.env.MSG91_TEMPLATE_ID);
+  return activeProvider() !== null;
 }
 
-async function sendSms(phone: string, code: string): Promise<void> {
-  if (!providerConfigured()) {
-    // Dev mode — never send, just log. (Do not log in production.)
-    if (process.env.NODE_ENV !== "production") {
-      console.log(`[otp] (dev) code for ${phone}: ${code}`);
-    }
-    return;
+async function sendViaFast2SMS(phone: string, code: string): Promise<void> {
+  // Fast2SMS OTP route: https://www.fast2sms.com/dev/bulkV2
+  // Sends "Your OTP: <code>" from Fast2SMS's OTP sender. No template needed.
+  const params = new URLSearchParams({
+    route: "otp",
+    variables_values: code,
+    numbers: phone, // 10-digit Indian number
+    flash: "0",
+  });
+  const res = await fetch(`https://www.fast2sms.com/dev/bulkV2?${params.toString()}`, {
+    method: "GET",
+    headers: { authorization: process.env.FAST2SMS_API_KEY! },
+  });
+  const body = await res.text().catch(() => "");
+  // Fast2SMS returns 200 with { return: true } on success, or an error JSON.
+  if (!res.ok || !/"return"\s*:\s*true/.test(body)) {
+    throw new Error(`Fast2SMS error ${res.status}: ${body.slice(0, 200)}`);
   }
-  // MSG91 Flow API — sends the code via an approved template variable.
+}
+
+async function sendViaMsg91(phone: string, code: string): Promise<void> {
   const res = await fetch("https://control.msg91.com/api/v5/flow/", {
     method: "POST",
-    headers: {
-      authkey: process.env.MSG91_AUTH_KEY!,
-      "Content-Type": "application/json",
-    },
+    headers: { authkey: process.env.MSG91_AUTH_KEY!, "Content-Type": "application/json" },
     body: JSON.stringify({
       template_id: process.env.MSG91_TEMPLATE_ID,
       ...(process.env.MSG91_SENDER_ID ? { sender: process.env.MSG91_SENDER_ID } : {}),
@@ -69,8 +86,21 @@ async function sendSms(phone: string, code: string): Promise<void> {
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(`SMS provider error ${res.status}: ${body.slice(0, 200)}`);
+    throw new Error(`MSG91 error ${res.status}: ${body.slice(0, 200)}`);
   }
+}
+
+async function sendSms(phone: string, code: string): Promise<void> {
+  const provider = activeProvider();
+  if (!provider) {
+    // Dev mode — never send, just log. (Do not log in production.)
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[otp] (dev) code for ${phone}: ${code}`);
+    }
+    return;
+  }
+  if (provider === "fast2sms") return sendViaFast2SMS(phone, code);
+  return sendViaMsg91(phone, code);
 }
 
 export async function sendOtp(
