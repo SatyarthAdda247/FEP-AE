@@ -11,15 +11,16 @@ export interface ProfileEditRequestItem {
   userName: string;
   userEmail: string;
   cohort?: string;
+  type?: "access_request" | "edit_request";
   status: "pending" | "approved" | "rejected";
   createdAt: string;
   reviewedAt?: string;
   reviewedBy?: string;
-  changes: Record<string, unknown>;
+  changes?: Record<string, unknown>;
   currentValues?: Record<string, unknown>;
 }
 
-// GET — list profile change requests (admin gets all, faculty gets their own)
+// GET — list profile change & access requests (admin gets all, faculty gets their own)
 export async function GET(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
@@ -40,28 +41,68 @@ export async function GET(req: Request) {
   return NextResponse.json({ requests: filtered });
 }
 
-// POST — submit a profile edit request
+// POST — submit a profile edit or access request
 export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
 
   const body = await req.json();
-  const { userId, changes } = body;
+  const { userId, changes, type, action } = body;
 
   const targetUserId = userId || user.userId;
   if (user.role === "eduskill_faculty" && targetUserId !== user.userId) {
     return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
   }
 
-  if (!changes || Object.keys(changes).length === 0) {
-    return NextResponse.json({ error: "No changes specified" }, { status: 400 });
-  }
-
-  // Fetch current user details for comparison and metadata
+  // Fetch current user details
   const userRes = await ddb.send(new GetCommand({ TableName: TABLES.USERS, Key: { userId: targetUserId } }));
   const dbUser = userRes.Item as User | undefined;
   if (!dbUser) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  const { UpdateCommand } = await import("@aws-sdk/lib-dynamodb");
+
+  // Case 1: Faculty requesting editing rights
+  if (type === "access_request" || action === "request_access") {
+    // Set editPermissionStatus to "requested" on user record
+    await ddb.send(
+      new UpdateCommand({
+        TableName: TABLES.USERS,
+        Key: { userId: targetUserId },
+        UpdateExpression: "SET editPermissionStatus = :eps",
+        ExpressionAttributeValues: { ":eps": "requested" },
+      })
+    );
+
+    const requestId = uuid();
+    const requestItem: ProfileEditRequestItem = {
+      requestId,
+      userId: targetUserId,
+      userName: dbUser.name,
+      userEmail: dbUser.email,
+      cohort: dbUser.cohort,
+      type: "access_request",
+      status: "pending",
+      createdAt: new Date().toISOString(),
+    };
+
+    await ddb.send(
+      new PutCommand({
+        TableName: TABLES.PROFILE_REQUESTS,
+        Item: requestItem,
+      })
+    );
+
+    return NextResponse.json({
+      success: true,
+      editPermissionStatus: "requested",
+      message: "Editing rights request submitted for admin approval",
+    });
+  }
+
+  if (!changes || Object.keys(changes).length === 0) {
+    return NextResponse.json({ error: "No changes specified" }, { status: 400 });
   }
 
   // If user is Admin or Manager, auto-apply the change directly!

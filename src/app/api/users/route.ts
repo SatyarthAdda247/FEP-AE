@@ -95,53 +95,27 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: "No fields to update" }, { status: 400 });
   }
 
-  // If requested by a faculty member, create a pending approval request for admin review!
-  if (user.role === "eduskill_faculty") {
-    const { PutCommand } = await import("@aws-sdk/lib-dynamodb");
-    const { v4: uuid } = await import("uuid");
-
-    const targetUserRes = await ddb.send(
-      new GetCommand({ TableName: TABLES.USERS, Key: { userId: targetUserId } })
-    );
-    const dbUser = targetUserRes.Item as User | undefined;
-    if (!dbUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    const currentValues: Record<string, unknown> = {};
-    for (const key of Object.keys(updateFields)) {
-      currentValues[key] = (dbUser as any)[key] ?? null;
-    }
-
-    const requestId = uuid();
-    const requestItem = {
-      requestId,
-      userId: targetUserId,
-      userName: dbUser.name,
-      userEmail: dbUser.email,
-      cohort: dbUser.cohort,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-      changes: updateFields,
-      currentValues,
-    };
-
-    await ddb.send(
-      new PutCommand({
-        TableName: TABLES.PROFILE_REQUESTS,
-        Item: requestItem,
-      })
-    );
-
-    return NextResponse.json({
-      success: true,
-      pendingApproval: true,
-      requestId,
-      message: "Profile edit request submitted for admin approval",
-    });
+  // Check target user's current record
+  const targetUserRes = await ddb.send(
+    new GetCommand({ TableName: TABLES.USERS, Key: { userId: targetUserId } })
+  );
+  const dbUser = targetUserRes.Item as User | undefined;
+  if (!dbUser) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  // For Admin or Manager, update directly in DynamoDB
+  // If faculty user, verify they have granted edit rights
+  if (user.role === "eduskill_faculty") {
+    const editStatus = (dbUser as any)?.editPermissionStatus;
+    if (editStatus !== "granted") {
+      return NextResponse.json(
+        { error: "Editing rights required. Please click 'Request Editing Rights' to get admin approval first." },
+        { status: 403 }
+      );
+    }
+  }
+
+  // Apply updates directly in DynamoDB and reset editPermissionStatus to "none"
   const updateParts: string[] = [];
   const expressionAttributeNames: Record<string, string> = {};
   const expressionAttributeValues: Record<string, unknown> = {};
@@ -150,6 +124,13 @@ export async function PUT(req: Request) {
     updateParts.push(`#${key} = :${key}`);
     expressionAttributeNames[`#${key}`] = key;
     expressionAttributeValues[`:${key}`] = value;
+  }
+
+  // Reset editPermissionStatus to none when saved
+  if (user.role === "eduskill_faculty") {
+    updateParts.push("#editPermissionStatus = :epsNone");
+    expressionAttributeNames["#editPermissionStatus"] = "editPermissionStatus";
+    expressionAttributeValues[":epsNone"] = "none";
   }
 
   try {

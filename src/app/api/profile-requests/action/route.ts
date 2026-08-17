@@ -31,6 +31,43 @@ export async function POST(req: Request) {
 
   const now = new Date().toISOString();
 
+  // Case A: Access Request (granting editing rights)
+  if (request.type === "access_request") {
+    const newStatus = action === "approve" ? "granted" : "none";
+    await ddb.send(
+      new UpdateCommand({
+        TableName: TABLES.USERS,
+        Key: { userId: request.userId },
+        UpdateExpression: "SET editPermissionStatus = :eps",
+        ExpressionAttributeValues: { ":eps": newStatus },
+      })
+    );
+
+    await ddb.send(
+      new UpdateCommand({
+        TableName: TABLES.PROFILE_REQUESTS,
+        Key: { requestId },
+        UpdateExpression: "SET #status = :s, #reviewedAt = :ra, #reviewedBy = :rb",
+        ExpressionAttributeNames: {
+          "#status": "status",
+          "#reviewedAt": "reviewedAt",
+          "#reviewedBy": "reviewedBy",
+        },
+        ExpressionAttributeValues: {
+          ":s": action === "approve" ? "approved" : "rejected",
+          ":ra": now,
+          ":rb": admin.name || admin.email,
+        },
+      })
+    );
+
+    return NextResponse.json({
+      success: true,
+      message: action === "approve" ? "Editing rights granted to user" : "Editing rights request rejected",
+    });
+  }
+
+  // Case B: Edit Request (applying profile field changes)
   if (action === "approve") {
     // Apply changes to the target user record in fep-users
     const changes = request.changes ?? {};

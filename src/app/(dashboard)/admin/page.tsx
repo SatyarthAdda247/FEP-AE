@@ -793,17 +793,18 @@ function ProfileRequestsPanel() {
     <div className="glass-strong rounded-2xl p-5 mb-6 border border-sky-500/20">
       <div className="flex items-center gap-2 mb-1">
         <ClipboardCheck className="h-4 w-4 text-sky-400" />
-        <h2 className="text-sm font-semibold">Faculty Profile Edit Requests</h2>
+        <h2 className="text-sm font-semibold">Faculty Profile Edit & Access Requests</h2>
         <span className="rounded-full bg-sky-500/10 border border-sky-500/25 text-sky-400 px-2 py-0.5 text-[10px] font-medium">
           {pendingRequests.length} pending
         </span>
       </div>
       <p className="text-xs text-fg-muted mb-4">
-        Faculty members requested updates to their onboarding profile details. Review requested changes below.
+        Review faculty profile edit requests and requests for profile editing access rights below.
       </p>
 
       <div className="space-y-3">
         {pendingRequests.map(r => {
+          const isAccessRequest = r.type === "access_request";
           const changeEntries = Object.entries(r.changes ?? {});
           return (
             <div key={r.requestId} className="rounded-xl border border-border/60 bg-bg-elev/40 p-4 space-y-3">
@@ -816,50 +817,59 @@ function ProfileRequestsPanel() {
                       {r.cohort}
                     </span>
                   )}
+                  {isAccessRequest && (
+                    <span className="ml-2 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-400 px-2.5 py-0.5 text-[10px] font-semibold">
+                      Requesting Editing Rights
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => actionMut.mutate({ requestId: r.requestId, action: "approve" })}
                     disabled={actionMut.isPending}
-                    className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 px-3 py-1.5 text-xs font-medium hover:bg-emerald-500/20 disabled:opacity-40 cursor-pointer"
+                    className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 px-3.5 py-1.5 text-xs font-semibold hover:bg-emerald-500/20 disabled:opacity-40 cursor-pointer"
                   >
-                    <Check className="h-3.5 w-3.5" /> Approve
+                    <Check className="h-3.5 w-3.5" />
+                    {isAccessRequest ? "Grant Edit Access" : "Approve Changes"}
                   </button>
                   <button
                     onClick={() => {
-                      if (confirm(`Reject profile edit request for ${r.userName}?`)) {
+                      if (confirm(`Reject request for ${r.userName}?`)) {
                         actionMut.mutate({ requestId: r.requestId, action: "reject" });
                       }
                     }}
                     disabled={actionMut.isPending}
-                    className="flex items-center gap-1.5 rounded-full bg-rose-500/10 border border-rose-500/25 text-rose-400 px-3 py-1.5 text-xs font-medium hover:bg-rose-500/20 disabled:opacity-40 cursor-pointer"
+                    className="flex items-center gap-1.5 rounded-full bg-rose-500/10 border border-rose-500/25 text-rose-400 px-3.5 py-1.5 text-xs font-semibold hover:bg-rose-500/20 disabled:opacity-40 cursor-pointer"
                   >
-                    <X className="h-3.5 w-3.5" /> Reject
+                    <X className="h-3.5 w-3.5" />
+                    {isAccessRequest ? "Deny Request" : "Reject"}
                   </button>
                 </div>
               </div>
 
-              {/* Diff list */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-1 border-t border-border/40 text-xs">
-                {changeEntries.map(([key, newVal]) => {
-                  const oldVal = (r.currentValues ?? {})[key];
-                  const label = FIELD_LABELS[key] || key;
-                  const formatVal = (v: any) => {
-                    if (v === null || v === undefined || v === "") return <span className="text-fg-dim italic">Empty</span>;
-                    if (Array.isArray(v)) return v.join(", ");
-                    return String(v);
-                  };
-                  return (
-                    <div key={key} className="rounded-lg border border-border bg-bg-elev/30 p-2 space-y-1">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-fg-muted block">{label}</span>
-                      <div className="text-[11px] space-y-0.5">
-                        <div className="text-rose-400/80 line-through truncate">Was: {formatVal(oldVal)}</div>
-                        <div className="text-emerald-400 font-medium truncate">New: {formatVal(newVal)}</div>
+              {/* Diff list for profile field changes */}
+              {!isAccessRequest && changeEntries.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-1 border-t border-border/40 text-xs">
+                  {changeEntries.map(([key, newVal]) => {
+                    const oldVal = (r.currentValues ?? {})[key];
+                    const label = FIELD_LABELS[key] || key;
+                    const formatVal = (v: any) => {
+                      if (v === null || v === undefined || v === "") return <span className="text-fg-dim italic">Empty</span>;
+                      if (Array.isArray(v)) return v.join(", ");
+                      return String(v);
+                    };
+                    return (
+                      <div key={key} className="rounded-lg border border-border bg-bg-elev/30 p-2 space-y-1">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-fg-muted block">{label}</span>
+                        <div className="text-[11px] space-y-0.5">
+                          <div className="text-rose-400/80 line-through truncate">Was: {formatVal(oldVal)}</div>
+                          <div className="text-emerald-400 font-medium truncate">New: {formatVal(newVal)}</div>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })}

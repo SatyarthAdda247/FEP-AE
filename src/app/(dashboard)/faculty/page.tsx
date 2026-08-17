@@ -2,7 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo, useEffect, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Inbox, Sparkles, Loader2, Search, Plus, Clock, UserCog, Camera, User, X } from "lucide-react";
+import { Inbox, Sparkles, Loader2, Search, Plus, Clock, UserCog, Camera, User, X, Lock } from "lucide-react";
 import { HeroStats } from "@/components/HeroStats";
 import { SubjectTabs } from "@/components/SubjectTabs";
 import { VideoCard } from "@/components/VideoCard";
@@ -289,7 +289,34 @@ function FacultyDashboardContent() {
       reader.readAsDataURL(file);
     }
   }
+  const [requestingAccess, setRequestingAccess] = useState(false);
 
+  async function handleRequestEditAccess() {
+    setRequestingAccess(true);
+    try {
+      const res = await fetch("/api/profile-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "access_request" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setStatusMessage({
+          type: "info",
+          text: "Editing rights request submitted to admin portal! Once approved, you can edit your profile.",
+        });
+        statsQ.refetch();
+        profileRequestsQ.refetch();
+      } else {
+        setStatusMessage({ type: "error", text: data.error || "Failed to request edit access" });
+      }
+    } catch (err) {
+      console.error(err);
+      setStatusMessage({ type: "error", text: "Failed to request edit access. Please try again." });
+    } finally {
+      setRequestingAccess(false);
+    }
+  }
 
   const filteredVideos = useMemo(() => {
     if (!stats?.videos) return [];
@@ -298,24 +325,23 @@ function FacultyDashboardContent() {
   }, [stats, activeSubject]);
 
   const subjectTabs = useMemo(() => {
-    const tabs = [
+    const tabs: { id: string; label: string; count?: number }[] = [
       { id: "all", label: "All", count: stats?.totalVideos ?? 0 },
     ];
     for (const s of subjects) {
       const c = stats?.bySubject?.[s.subjectId]?.count;
-      if (c)
-        tabs.push({ id: s.subjectId, label: s.name, count: c });
+      if (c) tabs.push({ id: s.subjectId, label: s.name, count: c });
     }
     return tabs;
   }, [subjects, stats]);
 
 
   return (
-    <div className="mx-auto max-w-[1400px] px-6 py-8 md:py-10">
+    <div className="space-y-6">
       <motion.div
-        initial={{ opacity: 0, y: 12 }}
+        initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-6 flex items-center justify-between"
+        className="flex items-center justify-between flex-wrap gap-4"
       >
         <div className="flex items-center gap-2 rounded-full border border-border bg-bg-elev/50 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
           <Sparkles className="h-3 w-3" />
@@ -323,19 +349,44 @@ function FacultyDashboardContent() {
         </div>
         {isOwnProfile && (
           <div className="flex items-center gap-3">
-            <button
-              data-tour="edit-profile"
-              onClick={() => setIsEditingProfile(p => !p)}
-              className={cn(
-                "flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-medium transition-colors cursor-pointer",
-                isEditingProfile
-                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
-                  : "border-border bg-bg-elev/50 text-fg hover:border-border-strong"
-              )}
-            >
-              <UserCog className="h-3.5 w-3.5 text-emerald-400" />
-              {isEditingProfile ? "Done Editing" : "Manage Profile"}
-            </button>
+            {((stats as any)?.editPermissionStatus === "granted" || user.role === "eduskill_admin") ? (
+              <button
+                data-tour="edit-profile"
+                onClick={() => setIsEditingProfile(p => !p)}
+                className={cn(
+                  "flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold transition-colors cursor-pointer shadow-xs",
+                  isEditingProfile
+                    ? "border-emerald-500/40 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                    : "border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700"
+                )}
+              >
+                <UserCog className="h-3.5 w-3.5" />
+                {isEditingProfile ? "Done Editing" : "Edit Profile"}
+              </button>
+            ) : (stats as any)?.editPermissionStatus === "requested" ? (
+              <button
+                disabled
+                className="flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-800 opacity-90 cursor-not-allowed shadow-xs"
+              >
+                <Clock className="h-3.5 w-3.5 text-amber-600" />
+                Edit Access Requested (Pending Approval)
+              </button>
+            ) : (
+              <button
+                data-tour="request-edit"
+                onClick={handleRequestEditAccess}
+                disabled={requestingAccess}
+                className="flex items-center gap-2 rounded-full border border-emerald-600 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors cursor-pointer shadow-xs"
+              >
+                {requestingAccess ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-600" />
+                ) : (
+                  <Lock className="h-3.5 w-3.5 text-emerald-600" />
+                )}
+                Request Editing Rights
+              </button>
+            )}
+
             <span data-tour="upload">
               <VideoUploader
                 subjects={subjects}
@@ -555,93 +606,12 @@ function FacultyDashboardContent() {
                     </div>
                   </div>
 
-                  {/* Teaching Details */}
-                  <div className="pt-4 border-t border-gray-100">
-                    <h3 className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-3.5">Teaching Details</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Subject (Teaching)</label>
-                        <input
-                          type="text"
-                          value={editTeachingSubject}
-                          onChange={(e) => setEditTeachingSubject(e.target.value)}
-                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
-                          placeholder="e.g. Maths, Physics, CS"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Address Details */}
-                  <div className="pt-4 border-t border-gray-100">
-                    <h3 className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-3.5">Address Details</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="sm:col-span-2 space-y-1.5">
-                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Address Line 1</label>
-                        <input
-                          type="text"
-                          value={editAddressLine1}
-                          onChange={(e) => setEditAddressLine1(e.target.value)}
-                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
-                          placeholder="House/Flat No., Building Name, Street"
-                        />
-                      </div>
-
-                      <div className="sm:col-span-2 space-y-1.5">
-                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Address Line 2 (Optional)</label>
-                        <input
-                          type="text"
-                          value={editAddressLine2}
-                          onChange={(e) => setEditAddressLine2(e.target.value)}
-                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
-                          placeholder="Landmark, Area, Locality"
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">City</label>
-                        <input
-                          type="text"
-                          value={editCity}
-                          onChange={(e) => setEditCity(e.target.value)}
-                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
-                          placeholder="City"
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">State</label>
-                        <select
-                          value={editState}
-                          onChange={(e) => setEditState(e.target.value)}
-                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all cursor-pointer"
-                        >
-                          <option value="">Select State</option>
-                          {INDIAN_STATES.map((st) => (
-                            <option key={st} value={st}>{st}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Pincode</label>
-                        <input
-                          type="text"
-                          value={editPincode}
-                          onChange={(e) => setEditPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
-                          placeholder="6-digit pincode"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Custom Subjects Selection */}
+                  {/* Teaching Details & Custom Subjects Selection */}
                   <div className="pt-4 border-t border-gray-100 space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
-                        <label className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">Custom Subjects Selection</label>
-                        <p className="text-[11px] text-gray-500">Search given options or enter custom subjects below.</p>
+                        <h3 className="text-xs font-bold text-emerald-700 uppercase tracking-wider block">Teaching Details & Subject Selection</h3>
+                        <p className="text-[11px] text-gray-500">Select given subject options or enter custom subjects below.</p>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2">
@@ -741,6 +711,70 @@ function FacultyDashboardContent() {
                           No predefined subjects match "{subjectSearch}". Use the "Enter custom subject" field above to add custom subjects.
                         </div>
                       )}
+                    </div>
+                  </div>
+
+                  {/* Address Details */}
+                  <div className="pt-4 border-t border-gray-100">
+                    <h3 className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-3.5">Address Details</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="sm:col-span-2 space-y-1.5">
+                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Address Line 1</label>
+                        <input
+                          type="text"
+                          value={editAddressLine1}
+                          onChange={(e) => setEditAddressLine1(e.target.value)}
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
+                          placeholder="House/Flat No., Building Name, Street"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2 space-y-1.5">
+                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Address Line 2 (Optional)</label>
+                        <input
+                          type="text"
+                          value={editAddressLine2}
+                          onChange={(e) => setEditAddressLine2(e.target.value)}
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
+                          placeholder="Landmark, Area, Locality"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">City</label>
+                        <input
+                          type="text"
+                          value={editCity}
+                          onChange={(e) => setEditCity(e.target.value)}
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
+                          placeholder="City"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">State</label>
+                        <select
+                          value={editState}
+                          onChange={(e) => setEditState(e.target.value)}
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all cursor-pointer"
+                        >
+                          <option value="">Select State</option>
+                          {INDIAN_STATES.map((st) => (
+                            <option key={st} value={st}>{st}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Pincode</label>
+                        <input
+                          type="text"
+                          value={editPincode}
+                          onChange={(e) => setEditPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
+                          placeholder="6-digit pincode"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
