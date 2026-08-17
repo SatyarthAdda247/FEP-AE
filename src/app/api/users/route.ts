@@ -76,7 +76,22 @@ export async function PUT(req: Request) {
   if (email !== undefined) updateFields.email = email;
   if (phone !== undefined) updateFields.phone = phone;
   if (backupPhone !== undefined) updateFields.backupPhone = backupPhone;
-  if (age !== undefined) updateFields.age = Number(age);
+  if (age !== undefined && age !== "" && !isNaN(Number(age))) {
+    updateFields.age = Number(age);
+  } else if (dob) {
+    const birth = new Date(dob);
+    if (!isNaN(birth.getTime())) {
+      const today = new Date();
+      let computedAge = today.getFullYear() - birth.getFullYear();
+      const m = today.getMonth() - birth.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+        computedAge--;
+      }
+      if (computedAge >= 0) {
+        updateFields.age = computedAge;
+      }
+    }
+  }
   if (dob !== undefined) updateFields.dob = dob;
   if (gender !== undefined) updateFields.gender = gender;
   if (tshirtSize !== undefined) updateFields.tshirtSize = tshirtSize;

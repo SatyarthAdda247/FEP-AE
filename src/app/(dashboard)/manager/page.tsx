@@ -14,7 +14,7 @@ import { SubjectRadar, buildRadarData } from "@/components/SubjectRadar";
 import { ScoreRing } from "@/components/ScoreRing";
 import { ProgramAnalytics } from "@/components/ProgramAnalytics";
 import { VideoUploader } from "@/components/VideoUploader";
-import { cn, extractYouTubeId, formatDate } from "@/lib/utils";
+import { cn, extractYouTubeId, formatDate, calculateAgeFromDob } from "@/lib/utils";
 import type { Subject, Video, GradiAnalysis, JWTPayload } from "@/types";
 import { SafeThumbnail } from "@/components/SafeThumbnail";
 
@@ -1155,8 +1155,9 @@ function MarchEduSkillDashboard({ isViewer = false }: { isViewer?: boolean }) {
   useEffect(() => {
     if (selectedFacultyData) {
       setEditName(selectedFacultyData.name || "");
-      setEditAge(selectedFacultyData.age ? String(selectedFacultyData.age) : "");
-      setEditDob(selectedFacultyData.dob || "");
+      const dobVal = selectedFacultyData.dob || "";
+      setEditDob(dobVal);
+      setEditAge(selectedFacultyData.age ? String(selectedFacultyData.age) : calculateAgeFromDob(dobVal));
       setEditSubjects(selectedFacultyData.subjects || []);
       setEditAvatar(selectedFacultyData.avatarUrl || "");
       setEditGender(selectedFacultyData.gender || "");
@@ -1418,22 +1419,40 @@ function MarchEduSkillDashboard({ isViewer = false }: { isViewer?: boolean }) {
                 <AnimatePresence mode="wait">
                   {isEditingProfile ? (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="space-y-4 pt-4 border-t border-border">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
                           <label className="block text-[10px] uppercase tracking-wider text-fg-muted mb-1 font-semibold">Name</label>
                           <input value={editName} onChange={e => setEditName(e.target.value)} className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-xs outline-none focus:border-fg/30" />
                         </div>
                         <div>
-                          <label className="block text-[10px] uppercase tracking-wider text-fg-muted mb-1 font-semibold">Age</label>
-                          <input type="number" value={editAge} onChange={e => setEditAge(e.target.value)} className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-xs outline-none focus:border-fg/30" />
+                          <label className="block text-[10px] uppercase tracking-wider text-fg-muted mb-1 font-semibold">Date of Birth (DOB)</label>
+                          <input
+                            type="date"
+                            value={editDob}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setEditDob(val);
+                              setEditAge(calculateAgeFromDob(val));
+                            }}
+                            className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-xs outline-none focus:border-fg/30 text-white cursor-pointer"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-[10px] uppercase tracking-wider text-fg-muted font-semibold">Age</label>
+                            <span className="text-[9px] text-emerald-400 font-medium">Auto-calculated</span>
+                          </div>
+                          <input
+                            type="text"
+                            value={editAge ? `${editAge} yrs` : ""}
+                            readOnly
+                            className="w-full rounded-lg border border-border bg-bg/50 px-3 py-2 text-xs outline-none text-fg-muted cursor-default"
+                            placeholder="Select DOB first"
+                          />
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-[10px] uppercase tracking-wider text-fg-muted mb-1 font-semibold">Date of Birth (DOB)</label>
-                          <input type="date" value={editDob} onChange={e => setEditDob(e.target.value)} className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-xs outline-none focus:border-fg/30 text-white" />
-                        </div>
                         <div>
                           <label className="block text-[10px] uppercase tracking-wider text-fg-muted mb-1 font-semibold">Profile Photo</label>
                           <input type="file" accept="image/*" onChange={handlePhotoUpload} className="w-full text-xs text-fg-muted file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-[11px] file:font-semibold file:bg-bg-elev file:text-fg hover:file:opacity-80 cursor-pointer" />

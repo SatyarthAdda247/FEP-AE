@@ -79,3 +79,16 @@ export function relativeTime(iso: string | null | undefined): string {
   if (dy < 7) return `${dy}d ago`;
   return formatDate(iso);
 }
+
+export function calculateAgeFromDob(isoOrDateStr: string | null | undefined): string {
+  if (!isoOrDateStr) return "";
+  const birth = new Date(isoOrDateStr);
+  if (isNaN(birth.getTime())) return "";
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age >= 0 ? String(age) : "";
+}

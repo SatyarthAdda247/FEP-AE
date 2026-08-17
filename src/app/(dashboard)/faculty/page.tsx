@@ -11,7 +11,7 @@ import { VideoUploader } from "@/components/VideoUploader";
 import { WelcomeGuide, type TourStep } from "@/components/WelcomeGuide";
 import { INDIAN_STATES, type Subject, type Video, type GradiAnalysis, type JWTPayload } from "@/types";
 import { useSearchParams, useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { cn, calculateAgeFromDob } from "@/lib/utils";
 
 // Batch kickoff — shown in the post-onboarding welcome popup
 const BATCH_STARTS_LABEL = "18 August 2026";
@@ -196,8 +196,9 @@ function FacultyDashboardContent() {
       setEditEmail(stats.facultyEmail || (user as any)?.email || "");
       setEditPhone(stats.phone || (user as any)?.phone || "");
       setEditBackupPhone(stats.backupPhone || "");
-      setEditAge(stats.age ? String(stats.age) : "");
-      setEditDob(stats.dob || "");
+      const dobVal = stats.dob || "";
+      setEditDob(dobVal);
+      setEditAge(stats.age ? String(stats.age) : calculateAgeFromDob(dobVal));
       setEditGender(stats.gender || "");
       setEditTshirtSize(stats.tshirtSize || "");
       setEditTeachingSubject(stats.teachingSubject || "");
@@ -556,23 +557,30 @@ function FacultyDashboardContent() {
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Age</label>
-                        <input
-                          type="number"
-                          value={editAge}
-                          onChange={(e) => setEditAge(e.target.value)}
-                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
-                          placeholder="Age"
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
                         <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Date of Birth (DOB)</label>
                         <input
                           type="date"
                           value={editDob}
-                          onChange={(e) => setEditDob(e.target.value)}
-                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditDob(val);
+                            setEditAge(calculateAgeFromDob(val));
+                          }}
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50/80 focus:bg-white px-3.5 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all cursor-pointer"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Age</label>
+                          <span className="text-[10px] text-emerald-600 font-medium">Auto-calculated</span>
+                        </div>
+                        <input
+                          type="text"
+                          value={editAge ? `${editAge} yrs` : ""}
+                          readOnly
+                          className="w-full rounded-xl border border-gray-200 bg-gray-100/90 px-3.5 py-2.5 text-xs font-semibold text-gray-700 outline-none cursor-default"
+                          placeholder="Select DOB first"
                         />
                       </div>
 
