@@ -38,7 +38,7 @@ export function GlobalUploadFab() {
         onClick={() => setShowUploader(true)}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-fg text-bg shadow-lg shadow-black/20 transition-colors hover:bg-fg/90"
+        className="fixed bottom-24 right-5 md:bottom-6 md:right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-fg text-bg shadow-lg shadow-black/20 transition-colors hover:bg-fg/90"
         style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}
       >
         <AnimatePresence mode="wait">

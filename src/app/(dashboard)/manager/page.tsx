@@ -217,19 +217,19 @@ function ManagerDashboardContent() {
   }
 
   return (
-    <div className="mx-auto max-w-[1400px] w-full px-6 py-6 h-[calc(100vh-64px)] flex flex-col overflow-hidden">
+    <div className="mx-auto max-w-[1400px] w-full px-4 md:px-6 py-4 md:py-6 md:h-[calc(100vh-64px)] flex flex-col md:overflow-hidden">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-6 flex items-center justify-between gap-4 flex-wrap"
+        className="mb-4 md:mb-6 flex items-center justify-between gap-3 flex-wrap"
       >
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 rounded-full border border-border bg-bg-elev/50 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="hidden sm:flex items-center gap-2 rounded-full border border-border bg-bg-elev/50 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
             <Sparkles className="h-3 w-3" />
             Manager Console
           </div>
-          {/* View toggle */}
-          <div className="flex items-center gap-0.5 rounded-full border border-border bg-bg-elev/50 p-0.5">
+          {/* View toggle — horizontally scrollable on mobile so no tab is cut off */}
+          <div className="flex items-center gap-0.5 rounded-full border border-border bg-bg-elev/50 p-1 overflow-x-auto no-scrollbar max-w-full">
             {(
               [
                 { id: "roster" as const, label: "Roster", icon: LayoutGrid },
@@ -245,7 +245,7 @@ function ManagerDashboardContent() {
                   key={v.id}
                   onClick={() => setView(v.id)}
                   className={cn(
-                    "relative flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors isolate",
+                    "relative flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] md:text-xs font-medium transition-colors isolate whitespace-nowrap shrink-0",
                     active ? "text-white dark:text-neutral-900" : "text-fg-muted hover:text-fg"
                   )}
                 >

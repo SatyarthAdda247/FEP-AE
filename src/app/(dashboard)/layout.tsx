@@ -3,8 +3,8 @@ import { GetCommand } from "@aws-sdk/lib-dynamodb";
 import { getCurrentUser } from "@/lib/auth";
 import { ddb, TABLES } from "@/lib/dynamodb";
 import { TopNav } from "@/components/TopNav";
+import { BottomNav } from "@/components/BottomNav";
 import { GlobalUploadFab } from "@/components/GlobalUploadFab";
-import MobileNavBar from "@/components/MobileNavBar";
 import type { User } from "@/types";
 
 export default async function DashboardLayout({
@@ -25,8 +25,10 @@ export default async function DashboardLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <TopNav userName={user.name} role={user.role} />
-      <main className="flex-1">{children}</main>
+      {/* pb clears the mobile bottom tab bar */}
+      <main className="flex-1 pb-20 md:pb-0">{children}</main>
       <GlobalUploadFab />
+      <BottomNav role={user.role} />
     </div>
   );
 }

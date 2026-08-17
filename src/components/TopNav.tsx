@@ -95,7 +95,7 @@ export function TopNav({ userName, role }: TopNavProps) {
             <div className="relative">
               <button
                 onClick={() => setShowCohortMenu(p => !p)}
-                className="flex items-center gap-1.5 rounded-full border border-border bg-bg-elev/50 px-3 py-1 text-[11px] font-medium text-fg-muted hover:text-fg hover:border-border-strong transition-colors"
+                className="flex items-center gap-1.5 rounded-full border border-border bg-bg-elev/50 px-3 py-1.5 text-xs font-medium text-fg-muted hover:text-fg hover:border-border-strong transition-colors whitespace-nowrap shrink-0"
               >
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
                 {cohort}
@@ -115,7 +115,7 @@ export function TopNav({ userName, role }: TopNavProps) {
             </div>
           )}
 
-          <nav data-tour="nav" className="flex items-center gap-1 ml-2">
+          <nav data-tour="nav" className="hidden md:flex items-center gap-1 ml-2">
             {navItems.map((item) => {
               const active =
                 pathname === item.href ||
