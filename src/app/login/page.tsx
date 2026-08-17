@@ -414,7 +414,20 @@ export default function LoginPage() {
 
             <a
               href="/onboarding"
-              className="w-full flex items-center justify-center gap-2 rounded-xl border border-border bg-bg-card px-4 py-2.5 text-sm font-medium text-fg hover:border-fg/30 transition-colors"
+              onClick={(e) => {
+                e.preventDefault();
+                const width = 540;
+                const height = 750;
+                const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - width) / 2));
+                const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - height) / 2));
+                const popup = window.open(
+                  "/onboarding",
+                  "EduSkillOnboarding",
+                  `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
+                );
+                if (popup) popup.focus();
+              }}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-border bg-bg-card px-4 py-2.5 text-sm font-medium text-fg hover:border-fg/30 transition-colors cursor-pointer"
             >
               <ClipboardCheck className="h-4 w-4" />
               New here? Set up your account

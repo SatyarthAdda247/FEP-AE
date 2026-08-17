@@ -49,6 +49,38 @@ function computeJuneCohortNetScore(videos: Video[], ratings: ManagerRating[]): n
   return Number(totalScore.toFixed(2));
 }
 
+// August cohort net score: for each rolling week (from the batch start),
+// only the top 3 rated videos that week count. Sum across weeks.
+const AUGUST_START = new Date("2026-08-18T00:00:00Z");
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+function computeAugustCohortNetScore(videos: Video[], ratings: ManagerRating[]): number {
+  const ratingMap = new Map<string, number>();
+  for (const r of ratings) {
+    if (r.managerId === "shared" || !ratingMap.has(r.videoId)) {
+      ratingMap.set(r.videoId, r.total);
+    }
+  }
+
+  // Bucket each rated video into its week index relative to the batch start.
+  const weekScores = new Map<number, number[]>();
+  for (const v of videos) {
+    if (!v.uploadedAt) continue;
+    const score = ratingMap.get(v.videoId);
+    if (score === undefined || score === null) continue;
+    const wk = Math.max(0, Math.floor((new Date(v.uploadedAt).getTime() - AUGUST_START.getTime()) / WEEK_MS));
+    if (!weekScores.has(wk)) weekScores.set(wk, []);
+    weekScores.get(wk)!.push(score);
+  }
+
+  let total = 0;
+  for (const scores of weekScores.values()) {
+    scores.sort((a, b) => b - a);
+    total += scores.slice(0, 3).reduce((sum, s) => sum + s, 0); // top 3 per week
+  }
+  return Number(total.toFixed(2));
+}
+
 function parseYTDuration(dur: string): string {
   if (!dur) return "";
   const match = dur.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
@@ -573,6 +605,14 @@ export async function GET(req: Request) {
       if (r) simpleRatings.push(r);
     }
     netScore = computeJuneCohortNetScore(filteredVideos, simpleRatings);
+  } else if (facultyUser?.cohort === "August EduSkill") {
+    const simpleRatings: ManagerRating[] = [];
+    for (const v of filteredVideos) {
+      const vRatings = ratingMap.get(v.videoId) || [];
+      const r = vRatings.find((rt) => rt.managerId === "shared") || vRatings[0];
+      if (r) simpleRatings.push(r);
+    }
+    netScore = computeAugustCohortNetScore(filteredVideos, simpleRatings);
   } else {
     const managerScores = filteredVideos
       .map((v) => {
@@ -817,7 +857,9 @@ async function aggregateAll(
 
       const netScore = cohort === "June EduSkill"
         ? computeJuneCohortNetScore(own, userRatings)
-        : Number(userRatings.reduce((sum, r) => sum + r.total, 0).toFixed(2));
+        : cohort === "August EduSkill"
+          ? computeAugustCohortNetScore(own, userRatings)
+          : Number(userRatings.reduce((sum, r) => sum + r.total, 0).toFixed(2));
 
       const yt = ytMap.get(u.userId);
 

@@ -26,6 +26,13 @@ const JUNE_WEEKS = [
   { label: "Week 4", range: "Jun 29–Jul 8", start: new Date("2026-06-29T00:00:00Z"), end: new Date("2026-07-08T23:59:59Z") },
 ];
 
+const AUGUST_WEEKS = [
+  { label: "Week 1", range: "Aug 18–24", start: new Date("2026-08-18T00:00:00Z"), end: new Date("2026-08-24T23:59:59Z") },
+  { label: "Week 2", range: "Aug 25–31", start: new Date("2026-08-25T00:00:00Z"), end: new Date("2026-08-31T23:59:59Z") },
+  { label: "Week 3", range: "Sep 1–7",   start: new Date("2026-09-01T00:00:00Z"), end: new Date("2026-09-07T23:59:59Z") },
+  { label: "Week 4", range: "Sep 8–12",  start: new Date("2026-09-08T00:00:00Z"), end: new Date("2026-09-12T23:59:59Z") },
+];
+
 const MARCH_WEEKS = [
   { label: "Week 1", range: "Apr 6–12" },
   { label: "Week 2", range: "Apr 13–19" },
@@ -57,7 +64,7 @@ function ColorAvatar({ name }: { name: string }) {
 }
 
 export default function LeaderboardPage() {
-  const [selectedCohort, setSelectedCohort] = useState<"June EduSkill" | "March EduSkill">("June EduSkill");
+  const [selectedCohort, setSelectedCohort] = useState<"August EduSkill" | "June EduSkill" | "March EduSkill">("August EduSkill");
   const [selectedTab, setSelectedTab] = useState<string>("leaderboard");
   const [viewMode, setViewMode] = useState<"summary" | "full">("summary");
   const [openVideoId, setOpenVideoId] = useState<string | null>(null);
@@ -88,26 +95,41 @@ export default function LeaderboardPage() {
     refetchInterval: 30_000,
   });
 
+  const augustQ = useQuery<{ leaderboard: FacultyLeaderRow[]; videos?: any[] }>({
+    queryKey: ["leaderboard-august"],
+    queryFn: () => fetch("/api/stats?scope=all&cohort=August+EduSkill").then(r => r.json()),
+    refetchInterval: 30_000,
+  });
+
   const archiveQ = useQuery<{ archive: any }>({
     queryKey: ["archive-data"],
     queryFn: () => fetch("/api/archive").then(r => r.json()),
   });
 
-  const loading = (selectedCohort === "June EduSkill" ? juneQ.isLoading : marchQ.isLoading);
+  const loading = selectedCohort === "August EduSkill" ? augustQ.isLoading
+    : selectedCohort === "June EduSkill" ? juneQ.isLoading
+    : marchQ.isLoading;
+
   const list = useMemo(() => {
-    const raw = selectedCohort === "June EduSkill" ? (juneQ.data?.leaderboard ?? []) : (marchQ.data?.leaderboard ?? []);
+    const raw = selectedCohort === "August EduSkill" ? (augustQ.data?.leaderboard ?? [])
+      : selectedCohort === "June EduSkill" ? (juneQ.data?.leaderboard ?? [])
+      : (marchQ.data?.leaderboard ?? []);
     if (selectedCohort === "March EduSkill") {
       return [...raw].sort((a: any, b: any) => (b.installs ?? 0) - (a.installs ?? 0));
     }
     return raw;
-  }, [selectedCohort, juneQ.data, marchQ.data]);
+  }, [selectedCohort, augustQ.data, juneQ.data, marchQ.data]);
 
 
-  // ── June week-wise per-faculty scores ──────────────────────────
-  const juneWeekData = useMemo(() => {
-    const videos = juneQ.data?.videos ?? [];
-    return JUNE_WEEKS.map((wk, wi) => {
-      const scored = list.map(f => {
+  // ── Helper to compute week-wise per-faculty scores ────────────
+  function buildWeekData(
+    weeks: typeof JUNE_WEEKS,
+    videos: any[],
+    facultyList: FacultyLeaderRow[],
+    topN: (wi: number) => number
+  ) {
+    return weeks.map((wk, wi) => {
+      const scored = facultyList.map(f => {
         const own = videos.filter(v =>
           v.facultyId === f.userId &&
           v.managerScore !== null && v.managerScore !== undefined &&
@@ -115,24 +137,35 @@ export default function LeaderboardPage() {
         );
         const scores = own.map((v: any) => v.managerScore).filter((s): s is number => s !== null);
         scores.sort((a, b) => b - a);
-        const limit = wi === 0 ? 1 : 3;
+        const limit = topN(wi);
         const score = scores.length > 0 ? scores.slice(0, limit).reduce((sum, s) => sum + s, 0) : null;
         return { userId: f.userId, name: f.name, score };
       }).filter(x => x.score !== null) as { userId: string; name: string; score: number }[];
-
       scored.sort((a, b) => b.score - a.score);
       return {
         ...wk,
         top5: scored.slice(0, 5),
         bottom5: scored.length >= 5 ? [...scored].reverse().slice(0, 5).reverse() : [],
-        fullList: scored
+        fullList: scored,
       };
     });
+  }
+
+  // ── June week-wise per-faculty scores (Week 1 top-1, rest top-3) ─
+  const juneWeekData = useMemo(() => {
+    return buildWeekData(JUNE_WEEKS, juneQ.data?.videos ?? [], list, (wi) => wi === 0 ? 1 : 3);
   }, [juneQ.data, list]);
+
+  // ── August week-wise per-faculty scores (top-3 every week) ──────
+  const augustWeekData = useMemo(() => {
+    return buildWeekData(AUGUST_WEEKS, augustQ.data?.videos ?? [], list, () => 3);
+  }, [augustQ.data, list]);
 
   // ── Rated videos for "Videos" tab ─────────────────────────────
   const ratedVideos = useMemo(() => {
-    const rawVideos = (selectedCohort === "June EduSkill" ? juneQ.data?.videos : marchQ.data?.videos) ?? [];
+    const rawVideos = (selectedCohort === "August EduSkill" ? augustQ.data?.videos
+      : selectedCohort === "June EduSkill" ? juneQ.data?.videos
+      : marchQ.data?.videos) ?? [];
     return rawVideos.filter((v: any) => v.managerScore !== null && v.managerScore !== undefined);
   }, [selectedCohort, juneQ.data, marchQ.data]);
 
@@ -146,7 +179,7 @@ export default function LeaderboardPage() {
 
   const tabs = [
     { key: "leaderboard", label: "Leaderboard" },
-    ...(selectedCohort === "June EduSkill" ? [{ key: "videos", label: "Videos" }] : []),
+    ...(selectedCohort === "August EduSkill" || selectedCohort === "June EduSkill" ? [{ key: "videos", label: "Videos" }] : []),
   ];
 
   if (loading) {
@@ -167,7 +200,7 @@ export default function LeaderboardPage() {
 
         {/* Cohort Selector */}
         <div className="flex items-center gap-1 rounded-xl border border-border bg-bg-elev/50 p-1 w-fit">
-          {(["June EduSkill", "March EduSkill"] as const).map(c => (
+          {(["August EduSkill", "June EduSkill", "March EduSkill"] as const).map(c => (
             <button key={c} onClick={() => { setSelectedCohort(c); setSelectedTab("leaderboard"); }}
               className={cn(
                 "rounded-lg px-4 py-1.5 text-xs font-medium transition-all cursor-pointer",
@@ -193,7 +226,7 @@ export default function LeaderboardPage() {
           ))}
         </div>
 
-        {selectedTab === "leaderboard" && selectedCohort === "June EduSkill" && (
+        {selectedTab === "leaderboard" && (selectedCohort === "June EduSkill" || selectedCohort === "August EduSkill") && (
           <div className="flex items-center gap-1 rounded-xl border border-border bg-bg-elev/40 p-1">
             <button
               onClick={() => setViewMode("summary")}
@@ -231,7 +264,7 @@ export default function LeaderboardPage() {
           >
             {/* TOP 5 PERFORMERS */}
             {/* TOP & BOTTOM 5 SUMMARY VIEW */}
-            {selectedCohort === "June EduSkill" && viewMode === "summary" && (
+            {(selectedCohort === "June EduSkill" || selectedCohort === "August EduSkill") && viewMode === "summary" && (
               <>
                 <div>
                   <div className="flex items-center gap-2 mb-3">
@@ -239,7 +272,7 @@ export default function LeaderboardPage() {
                     <h2 className="text-sm font-bold text-emerald-400 uppercase tracking-wider">Top 5 Performers</h2>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-                    {juneWeekData.map((wk, wi) => {
+                    {(selectedCohort === "August EduSkill" ? augustWeekData : juneWeekData).map((wk, wi) => {
                       const col = WEEK_COLORS[wi];
                       return (
                         <motion.div
@@ -306,7 +339,7 @@ export default function LeaderboardPage() {
                     <h2 className="text-sm font-bold text-rose-400 uppercase tracking-wider">Bottom 5 — Needs Attention</h2>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-                    {juneWeekData.map((wk, wi) => {
+                    {(selectedCohort === "August EduSkill" ? augustWeekData : juneWeekData).map((wk, wi) => {
                       const col = WEEK_COLORS[wi];
                       return (
                         <motion.div
@@ -363,14 +396,14 @@ export default function LeaderboardPage() {
             )}
 
             {/* COMPLETE WEEK-WISE RANKINGS VIEW */}
-            {selectedCohort === "June EduSkill" && viewMode === "full" && (
+            {(selectedCohort === "June EduSkill" || selectedCohort === "August EduSkill") && viewMode === "full" && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="h-2.5 w-2.5 rounded-full bg-violet-500 animate-pulse" />
                   <h2 className="text-sm font-bold text-violet-400 uppercase tracking-wider">Complete Week-wise Rankings</h2>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-                  {juneWeekData.map((wk, wi) => {
+                  {(selectedCohort === "August EduSkill" ? augustWeekData : juneWeekData).map((wk, wi) => {
                     const col = WEEK_COLORS[wi];
                     return (
                       <motion.div
@@ -516,7 +549,7 @@ export default function LeaderboardPage() {
         onClose={() => setOpenVideoId(null)}
         managerMode={isManager}
         managerId={user?.userId}
-        onRated={() => { juneQ.refetch(); marchQ.refetch(); }}
+        onRated={() => { juneQ.refetch(); marchQ.refetch(); augustQ.refetch(); }}
         hideScoring={!isManager}
       />
     </div>

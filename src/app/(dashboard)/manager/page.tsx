@@ -1006,7 +1006,8 @@ function JuneRatingQueue({ openVideoId, setOpenVideoId, managerId, onRated, coho
       ) : (
         <div className="flex-1 overflow-y-auto min-h-0 pr-1 no-scrollbar">
           <div className="glass rounded-2xl overflow-hidden">
-          <div className="grid grid-cols-[88px_1fr_160px_100px_60px] gap-2 px-4 py-2.5 bg-bg-elev/50 border-b border-border text-[10px] uppercase tracking-[0.15em] text-fg-muted font-medium">
+          {/* Column header — desktop only; mobile uses stacked cards */}
+          <div className="hidden md:grid grid-cols-[88px_1fr_160px_100px_60px] gap-2 px-4 py-2.5 bg-bg-elev/50 border-b border-border text-[10px] uppercase tracking-[0.15em] text-fg-muted font-medium">
             <span></span>
             <span>Video</span>
             <span>Faculty</span>
@@ -1014,55 +1015,52 @@ function JuneRatingQueue({ openVideoId, setOpenVideoId, managerId, onRated, coho
             <span className="text-center">Score</span>
           </div>
           {filtered.map(v => (
-            <div key={v.videoId} className="grid grid-cols-[88px_1fr_160px_100px_60px] gap-2 px-4 py-2.5 border-b border-border/50 hover:bg-bg-elev/30 transition-colors items-center">
-              {/* Thumbnail */}
-              <div className="w-20 h-14 rounded-md overflow-hidden bg-bg-elev flex-shrink-0">
-                <SafeThumbnail
-                  src={v.thumbnailUrl}
-                  alt=""
-                  className="w-full h-full object-cover"
-                  iconSize={12}
-                />
-              </div>
-              {/* Title + date + stats */}
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-fg truncate">{v.title}</p>
-                <p className="text-[10px] text-fg-muted mt-0.5">
-                  {v.subject} · {formatDate(v.uploadedAt)}
-                  {v.views !== undefined && ` · ${v.views} views`}
-                  {v.likes !== undefined && ` · ${v.likes} likes`}
-                  {v.duration && ` · ${v.duration}`}
-                </p>
-              </div>
-              {/* Faculty */}
-              <span className="text-[11px] text-fg-muted truncate">{v.facultyName ?? "—"}</span>
-              {/* Status */}
-              <div className="text-center">
-                <span className={cn("inline-block px-1.5 py-0.5 rounded-full text-[9px] uppercase tracking-wider font-medium",
-                  v.status === "manager_rated" ? "bg-emerald-500/10 text-emerald-400" :
-                  "bg-fg/5 text-fg-muted"
-                )}>
-                  {v.status === "manager_rated" ? "done" : "pending"}
-                </span>
-              </div>
-              {/* Score button */}
-              <div className="text-center">
-                <button
-                  onClick={() => setOpenVideoId(v.videoId)}
-                  className={cn(
-                    "text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors border",
-                    v.status === "manager_rated"
-                      ? "border-border bg-bg-elev/40 hover:bg-bg-elev text-fg"
-                      : "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 hover:opacity-80"
-                  )}
-                >
-                  {(v as any).managerRating?.total !== undefined ? `${(v as any).managerRating.total.toFixed(1)}/25` : (readOnly ? "View" : "Score")}
-                </button>
-                {(v as any).managerRating?.managerName && (
-                  <p className="text-[9px] text-emerald-400 font-medium mt-1 truncate max-w-[80px] mx-auto" title={`Rated by ${(v as any).managerRating.managerName}`}>
-                    by {(v as any).managerRating.managerName.split(" ")[0]}
+            <div key={v.videoId} className="flex flex-col gap-3 px-4 py-3 border-b border-border/50 hover:bg-bg-elev/30 transition-colors md:grid md:grid-cols-[88px_1fr_160px_100px_60px] md:gap-2 md:py-2.5 md:items-center">
+              {/* Thumbnail + title/meta (+faculty on mobile). md:contents promotes children to grid cells on desktop */}
+              <div className="flex gap-3 md:contents">
+                <div className="w-24 h-16 md:w-20 md:h-14 rounded-md overflow-hidden bg-bg-elev flex-shrink-0">
+                  <SafeThumbnail src={v.thumbnailUrl} alt="" className="w-full h-full object-cover" iconSize={12} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-fg line-clamp-2 md:truncate">{v.title}</p>
+                  <p className="text-[11px] md:text-[10px] text-fg-muted mt-0.5">
+                    {v.subject} · {formatDate(v.uploadedAt)}
+                    {v.views !== undefined && ` · ${v.views} views`}
+                    {v.likes !== undefined && ` · ${v.likes} likes`}
+                    {v.duration && ` · ${v.duration}`}
                   </p>
-                )}
+                  <p className="md:hidden text-[11px] text-fg-muted mt-0.5 truncate">{v.facultyName ?? "—"}</p>
+                </div>
+              </div>
+              {/* Faculty — desktop column only */}
+              <span className="hidden md:block text-[11px] text-fg-muted truncate">{v.facultyName ?? "—"}</span>
+              {/* Status + Score — a row on mobile, two grid cells on desktop */}
+              <div className="flex items-center justify-between gap-2 md:contents">
+                <div className="md:text-center">
+                  <span className={cn("inline-block px-2 py-0.5 rounded-full text-[10px] md:text-[9px] uppercase tracking-wider font-medium",
+                    v.status === "manager_rated" ? "bg-emerald-500/10 text-emerald-400" : "bg-fg/5 text-fg-muted"
+                  )}>
+                    {v.status === "manager_rated" ? "done" : "pending"}
+                  </span>
+                </div>
+                <div className="md:text-center">
+                  <button
+                    onClick={() => setOpenVideoId(v.videoId)}
+                    className={cn(
+                      "text-xs font-semibold px-4 py-2 md:px-3 md:py-1.5 rounded-lg transition-colors border",
+                      v.status === "manager_rated"
+                        ? "border-border bg-bg-elev/40 hover:bg-bg-elev text-fg"
+                        : "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 hover:opacity-80"
+                    )}
+                  >
+                    {(v as any).managerRating?.total !== undefined ? `${(v as any).managerRating.total.toFixed(1)}/25` : (readOnly ? "View" : "Score")}
+                  </button>
+                  {(v as any).managerRating?.managerName && (
+                    <p className="text-[9px] text-emerald-400 font-medium mt-1 truncate max-w-[80px] md:mx-auto" title={`Rated by ${(v as any).managerRating.managerName}`}>
+                      by {(v as any).managerRating.managerName.split(" ")[0]}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           ))}

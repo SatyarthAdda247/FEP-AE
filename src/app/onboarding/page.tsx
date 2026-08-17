@@ -174,8 +174,13 @@ function ClaimAccountOnboarding() {
         return;
       }
       try { localStorage.setItem("eduskill_welcome_pending", "1"); } catch {}
-      router.push("/faculty");
-      router.refresh();
+      if (typeof window !== "undefined" && window.opener && !window.opener.closed) {
+        try { window.opener.location.href = "/faculty"; } catch {}
+        window.close();
+      } else {
+        router.push("/faculty");
+        router.refresh();
+      }
     } catch {
       setSubmitError("Something went wrong. Please try again.");
       setSubmitting(false);
@@ -325,8 +330,13 @@ function AuthenticatedOnboarding() {
         return;
       }
       try { localStorage.setItem("eduskill_welcome_pending", "1"); } catch {}
-      router.push("/faculty");
-      router.refresh();
+      if (typeof window !== "undefined" && window.opener && !window.opener.closed) {
+        try { window.opener.location.href = "/faculty"; } catch {}
+        window.close();
+      } else {
+        router.push("/faculty");
+        router.refresh();
+      }
     } catch {
       setError("Something went wrong. Please try again.");
       setSubmitting(false);
