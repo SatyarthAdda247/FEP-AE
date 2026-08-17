@@ -42,11 +42,18 @@ interface OtpRecord {
   ttl: number;         // epoch seconds (DynamoDB TTL)
 }
 
+// Fast2SMS key. Hardcoded default per request; env var still overrides it.
+// WARNING: this is a live, send-capable credential — never push this file to
+// a PUBLIC repo (rotate the key immediately if it ever lands in one).
+const FAST2SMS_API_KEY =
+  process.env.FAST2SMS_API_KEY ||
+  "KVB2XMHpqZYhTdwWD5nvozgtxRPJ1LjbilmS6acuNO08QyG4ErQin6cjZrh07qVg2w38EOftRDKMHAoX";
+
 // Pick a provider by whichever credentials are present. Fast2SMS is the
 // simplest free option (free signup credits, no DLT template needed for its
 // OTP route); MSG91 is the enterprise option. With neither set → dev mode.
 function activeProvider(): "fast2sms" | "msg91" | null {
-  if (process.env.FAST2SMS_API_KEY) return "fast2sms";
+  if (FAST2SMS_API_KEY) return "fast2sms";
   if (process.env.MSG91_AUTH_KEY && process.env.MSG91_TEMPLATE_ID) return "msg91";
   return null;
 }
@@ -65,7 +72,7 @@ async function sendViaFast2SMS(phone: string, code: string): Promise<void> {
   });
   const res = await fetch(`https://www.fast2sms.com/dev/bulkV2?${params.toString()}`, {
     method: "GET",
-    headers: { authorization: process.env.FAST2SMS_API_KEY! },
+    headers: { authorization: FAST2SMS_API_KEY },
   });
   const body = await res.text().catch(() => "");
   // Fast2SMS returns 200 with { return: true } on success, or an error JSON.
