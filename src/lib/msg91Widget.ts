@@ -40,18 +40,26 @@ function ensureLoaded(): Promise<void> {
       s.src = SCRIPT_URLS[i];
       s.async = true;
       s.onload = () => {
-        if (typeof window.initSendOTP === "function") {
-          window.initSendOTP({
-            widgetId: WIDGET_ID,
-            tokenAuth: TOKEN_AUTH,
-            exposeMethods: true, // gives us window.sendOtp / verifyOtp / retryOtp
-            success: () => {},
-            failure: () => {},
-          });
-          resolve();
-        } else {
+        if (typeof window.initSendOTP !== "function") {
           reject(new Error("MSG91 widget failed to initialise"));
+          return;
         }
+        window.initSendOTP({
+          widgetId: WIDGET_ID,
+          tokenAuth: TOKEN_AUTH,
+          exposeMethods: true, // gives us window.sendOtp / verifyOtp / retryOtp
+          success: () => {},
+          failure: () => {},
+        });
+        // The widget attaches the exposed methods asynchronously (after its
+        // getWidgetProcess call), so wait until sendOtp is actually available.
+        const startedAt = Date.now();
+        const poll = () => {
+          if (typeof window.sendOtp === "function") { resolve(); return; }
+          if (Date.now() - startedAt > 10000) { reject(new Error("OTP service did not finish loading. Please retry.")); return; }
+          setTimeout(poll, 100);
+        };
+        poll();
       };
       s.onerror = () => {
         i++;
