@@ -11,6 +11,7 @@
 
 const WIDGET_ID = "366872654d68373139313738";
 const TOKEN_AUTH = "561716T0Weq8Je6a83f013P1";
+const CAPTCHA_ID = "msg91-captcha-container";
 
 const SCRIPT_URLS = [
   "https://verify.msg91.com/otp-provider.js",
@@ -44,10 +45,18 @@ function ensureLoaded(): Promise<void> {
           reject(new Error("MSG91 widget failed to initialise"));
           return;
         }
+        // Ensure a container exists for the captcha to render into. Without a
+        // captchaRenderId the widget can emit an invalid/empty captcha token.
+        if (!document.getElementById(CAPTCHA_ID)) {
+          const el = document.createElement("div");
+          el.id = CAPTCHA_ID;
+          document.body.appendChild(el);
+        }
         window.initSendOTP({
           widgetId: WIDGET_ID,
           tokenAuth: TOKEN_AUTH,
           exposeMethods: true, // gives us window.sendOtp / verifyOtp / retryOtp
+          captchaRenderId: CAPTCHA_ID,
           success: () => {},
           failure: () => {},
         });
