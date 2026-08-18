@@ -403,7 +403,12 @@ export default function LoginPage() {
                 className="w-full rounded-xl border border-border bg-bg-card pl-9 pr-3 py-3 text-sm text-fg outline-none focus:border-fg/30"
               />
             </div>
+            <div className="flex items-center justify-end text-[11px] -mt-1">
+              <a href="/forgot-password" className="text-fg-muted hover:text-fg transition-colors">Forgot password?</a>
+            </div>
+
             {emailError && <p className="text-xs text-rose-400">{emailError}</p>}
+
             <button
               type="submit"
               disabled={emailLoading}
@@ -412,23 +417,15 @@ export default function LoginPage() {
               {emailLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
               Sign in
             </button>
-            <div className="flex items-center justify-between text-[11px]">
-              <a href="/forgot-password" className="text-fg-muted hover:text-fg transition-colors">Forgot password?</a>
-              <a
-                href="/onboarding"
-                onClick={(e) => {
-                  e.preventDefault();
-                  const width = 540, height = 750;
-                  const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - width) / 2));
-                  const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - height) / 2));
-                  const popup = window.open("/onboarding", "EduSkillOnboarding", `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`);
-                  if (popup) popup.focus();
-                }}
-                className="text-fg-muted hover:text-fg transition-colors cursor-pointer"
-              >
-                New here? Set up account
-              </a>
-            </div>
+
+            <button
+              type="button"
+              onClick={() => router.push("/onboarding")}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-fg px-4 py-3 text-sm font-semibold text-bg hover:bg-fg/90 transition-colors cursor-pointer"
+            >
+              <ArrowRight className="h-4 w-4" />
+              EduSkill Onboarding
+            </button>
           </form>
 
           {/* Divider */}
